@@ -157,6 +157,63 @@ class Database {
             console.log('Пользователи загружены в базу');
         }
     }
+
+    async updateExercises(newExercises) {
+    // Проверяем версию упражнений
+    const currentVersion = await this.get('settings', 'exercisesVersion');
+    const newVersion = JSON.stringify(newExercises);
+    
+    // Если версия совпадает — не обновляем
+    if (currentVersion && currentVersion.value === newVersion) {
+        console.log('Упражнения актуальны, пропускаем обновление');
+        return false;
+    }
+    
+    // Получаем текущие упражнения
+    const existingExercises = await this.getAll('exercises');
+    
+    // Если есть пользовательские данные (тренировки), делаем умное обновление
+    if (existingExercises.length > 0) {
+        // Проверяем, есть ли тренировки с этими упражнениями
+        const allSessions = await this.getAll('sessions');
+        const usedExerciseIds = new Set();
+        
+        allSessions.forEach(session => {
+            if (session.exercises) {
+                session.exercises.forEach(ex => {
+                    if (ex.exerciseId) usedExerciseIds.add(ex.exerciseId);
+                });
+            }
+        });
+        
+        // Удаляем только неиспользуемые упражнения
+        for (const ex of existingExercises) {
+            if (!usedExerciseIds.has(ex.id)) {
+                await this.delete('exercises', ex.id);
+            }
+        }
+        
+        // Добавляем или обновляем упражнения
+        for (const ex of newExercises) {
+            await this.put('exercises', ex);
+        }
+    } else {
+        // Если тренировок нет — просто заменяем все
+        await this.clear('exercises');
+        for (const ex of newExercises) {
+            await this.add('exercises', ex);
+        }
+    }
+    
+    // Сохраняем версию
+    await this.put('settings', {
+        key: 'exercisesVersion',
+        value: newVersion
+    });
+    
+    console.log('Упражнения обновлены');
+    return true;
+}
 }
 
 const DB = new Database();

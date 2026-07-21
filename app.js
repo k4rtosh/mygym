@@ -17,9 +17,12 @@ async function initApp() {
         try {
             const exercisesResponse = await fetch('data/exercises.json');
             const exercisesData = await exercisesResponse.json();
-            await DB.seedExercises(exercisesData.exercises);
+            const updated = await DB.updateExercises(exercisesData.exercises);
+            if (updated) {
+                console.log('База упражнений обновлена');
+            }
         } catch (e) {
-            console.log('Упражнения уже загружены или файл недоступен');
+            console.log('Ошибка загрузки упражнений:', e);
         }
         
         // Проверяем активную сессию тренировки
