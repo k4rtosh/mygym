@@ -313,48 +313,91 @@ class AppRouter {
     }
     
     async initProfilePage() {
-    const user = Auth.getCurrentUser();
-    const profileName = document.getElementById('profile-name');
-    const profileJoinDate = document.getElementById('profile-join-date');
-    
-    if (profileName) profileName.textContent = user.name;
-    if (profileJoinDate) profileJoinDate.textContent = Utils.formatDate(user.joinDate);
-    
-    const exportBtn = document.getElementById('export-data-btn');
-    const importBtn = document.getElementById('import-data-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    
-    if (exportBtn) {
-        exportBtn.addEventListener('click', () => {
-            SyncManager.exportData();
-        });
-    }
-    
-    if (importBtn) {
-        importBtn.addEventListener('click', () => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            input.onchange = async (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    await SyncManager.importData(file);
+        const user = Auth.getCurrentUser();
+        const profileName = document.getElementById('profile-name');
+        const profileJoinDate = document.getElementById('profile-join-date');
+        
+        if (profileName) profileName.textContent = user.name;
+        if (profileJoinDate) profileJoinDate.textContent = Utils.formatDate(user.joinDate);
+        
+        // Экспорт данных
+        const exportBtn = document.getElementById('export-data-btn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                SyncManager.exportData();
+            });
+        }
+        
+        // Импорт данных
+        const importBtn = document.getElementById('import-data-btn');
+        if (importBtn) {
+            importBtn.addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        await SyncManager.importData(file);
+                    }
+                };
+                input.click();
+            });
+        }
+        
+        // Сброс базы упражнений
+        const resetExercisesBtn = document.getElementById('reset-exercises-btn');
+        if (resetExercisesBtn) {
+            resetExercisesBtn.addEventListener('click', async () => {
+                const confirmed = await Utils.confirm(
+                    'Обновить список упражнений?\n\n' +
+                    'Будут загружены новые упражнения из последней версии приложения. ' +
+                    'Ваши тренировки и шаблоны сохранятся.'
+                );
+                
+                if (!confirmed) return;
+                
+                try {
+                    // Удаляем старую версию
+                    await DB.delete('settings', 'exercisesVersion');
+                    
+                    // Очищаем упражнения
+                    await DB.clear('exercises');
+                    
+                    // Загружаем новые из JSON
+                    const response = await fetch('data/exercises.json');
+                    const data = await response.json();
+                    
+                    for (const ex of data.exercises) {
+                        await DB.add('exercises', ex);
+                    }
+                    
+                    // Сохраняем новую версию
+                    await DB.put('settings', {
+                        key: 'exercisesVersion',
+                        value: JSON.stringify(data.exercises)
+                    });
+                    
+                    Utils.showToast('База упражнений обновлена! 🎉');
+                } catch (error) {
+                    console.error('Ошибка обновления:', error);
+                    Utils.showToast('Ошибка: ' + error.message, 'danger');
                 }
-            };
-            input.click();
-        });
+            });
+        }
+        
+        // Выход
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                const confirmed = await Utils.confirm('Выйти из профиля?');
+                if (confirmed) {
+                    await Auth.logout();
+                    this.navigate('login');
+                }
+            });
+        }
     }
-    
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            const confirmed = await Utils.confirm('Выйти из профиля?');
-            if (confirmed) {
-                await Auth.logout();
-                this.navigate('login');
-            }
-        });
-    }
-}
 }
 
 function selectUser(userId) {
