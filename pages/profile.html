@@ -1,0 +1,40 @@
+<div class="app-header fade-in">
+    <div class="d-flex align-items-center">
+        <button class="btn btn-link text-white me-2" onclick="Router.navigate('home')">
+            <i class="bi bi-arrow-left"></i>
+        </button>
+        <h4 class="mb-0">Профиль</h4>
+    </div>
+</div>
+
+<div class="container fade-in">
+    <div class="card mb-3">
+        <div class="card-body text-center">
+            <div class="user-avatar mb-3">
+                <i class="bi bi-person-circle display-1"></i>
+            </div>
+            <h5 id="profile-name"></h5>
+            <p class="text-muted">Участник с <span id="profile-join-date"></span></p>
+        </div>
+    </div>
+    
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6>Данные</h6>
+            <button class="btn btn-outline-light w-100 mb-2" id="export-data-btn">
+                <i class="bi bi-download"></i> Экспорт данных (JSON)
+            </button>
+            <button class="btn btn-outline-light w-100" id="import-data-btn">
+                <i class="bi bi-upload"></i> Импорт данных (JSON)
+            </button>
+        </div>
+    </div>
+    
+    <button class="btn btn-outline-danger w-100" id="logout-btn">
+        <i class="bi bi-box-arrow-right"></i> Выйти
+    </button>
+    
+    <div class="text-center mt-4">
+        <small class="text-muted">MyGym v1.0.0</small>
+    </div>
+</div>

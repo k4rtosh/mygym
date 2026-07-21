@@ -1,0 +1,34 @@
+<div class="app-header fade-in">
+    <div class="d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Шаблоны тренировок</h4>
+        <button class="btn btn-primary btn-sm" onclick="Templates.createNew()">
+            <i class="bi bi-plus"></i> Новый
+        </button>
+    </div>
+</div>
+
+<div class="container fade-in">
+    <div id="templates-list">
+        <!-- Шаблоны будут загружены динамически -->
+    </div>
+</div>
+
+<!-- Нижнее меню -->
+<nav class="bottom-nav">
+    <div class="nav-item" onclick="Router.navigate('home')">
+        <i class="bi bi-house"></i>
+        <span>Главная</span>
+    </div>
+    <div class="nav-item" onclick="Router.navigate('templates')">
+        <i class="bi bi-collection"></i>
+        <span>Шаблоны</span>
+    </div>
+    <div class="nav-item" onclick="Router.navigate('history')">
+        <i class="bi bi-clock-history"></i>
+        <span>История</span>
+    </div>
+    <div class="nav-item" onclick="Router.navigate('profile')">
+        <i class="bi bi-person"></i>
+        <span>Профиль</span>
+    </div>
+</nav>

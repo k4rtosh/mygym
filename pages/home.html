@@ -1,0 +1,60 @@
+<div class="app-header fade-in">
+    <h4 id="user-greeting">Привет!</h4>
+    <p class="text-muted mb-0">Готов к тренировке?</p>
+</div>
+
+<div class="container fade-in">
+    <!-- Статистика -->
+    <div class="row mb-4">
+        <div class="col-4">
+            <div class="card stat-card">
+                <div class="stat-value" id="stat-today">0</div>
+                <div class="stat-label">Сегодня</div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="card stat-card">
+                <div class="stat-value" id="stat-week">0</div>
+                <div class="stat-label">За неделю</div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="card stat-card">
+                <div class="stat-value" id="stat-total">0</div>
+                <div class="stat-label">Всего</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Кнопка начать тренировку -->
+    <button class="start-workout-btn mb-4" id="start-workout-btn">
+        <i class="bi bi-lightning-charge"></i> Начать тренировку
+    </button>
+    
+    <!-- Инфо о последней тренировке -->
+    <div id="last-workout-info" class="fade-in">
+        <div class="alert alert-secondary">
+            Нет завершённых тренировок
+        </div>
+    </div>
+</div>
+
+<!-- Нижнее меню -->
+<nav class="bottom-nav">
+    <div class="nav-item" onclick="Router.navigate('home')">
+        <i class="bi bi-house"></i>
+        <span>Главная</span>
+    </div>
+    <div class="nav-item" onclick="Router.navigate('templates')">
+        <i class="bi bi-collection"></i>
+        <span>Шаблоны</span>
+    </div>
+    <div class="nav-item" onclick="Router.navigate('history')">
+        <i class="bi bi-clock-history"></i>
+        <span>История</span>
+    </div>
+    <div class="nav-item" onclick="Router.navigate('profile')">
+        <i class="bi bi-person"></i>
+        <span>Профиль</span>
+    </div>
+</nav>
