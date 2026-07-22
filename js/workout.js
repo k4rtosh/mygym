@@ -5,6 +5,8 @@ class WorkoutManager {
     static timerInterval = null;
     static startTime = null;
     static elapsedSeconds = 0;
+    static exerciseTimers = {};  // Таймеры для каждого упражнения
+    static exerciseStartTimes = {};  // Время начала каждого упражнения
     
     static async loadStartWorkout() {
         const user = Auth.getCurrentUser();
@@ -212,28 +214,52 @@ class WorkoutManager {
                 const exerciseInfo = allExercises.find(e => e.id === ex.exerciseId);
                 const exerciseName = exerciseInfo ? exerciseInfo.name : 'Неизвестное упражнение';
                 
+                // Считаем время выполнения упражнения
+                const exerciseTime = ex.exerciseTime || 0;
+                const isTimerRunning = this.exerciseTimers[index] ? true : false;
+                const currentTime = isTimerRunning ? 
+                    Math.floor((new Date() - this.exerciseStartTimes[index]) / 1000) + exerciseTime : 
+                    exerciseTime;
+                
                 return `
                     <div class="card mb-3 ${ex.completed ? 'border-success' : ''}">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h6 class="mb-0">${exerciseName}</h6>
-                            ${ex.completed ? '<span class="badge bg-success">Выполнено</span>' : ''}
+                            <div class="d-flex align-items-center">
+                                <small class="text-muted me-3 exercise-time-display" id="exercise-time-${index}">
+                                    <i class="bi bi-stopwatch"></i> ${Utils.formatTime(currentTime)}
+                                </small>
+                                ${ex.completed ? '<span class="badge bg-success">✓</span>' : ''}
+                            </div>
                         </div>
                         <div class="card-body">
                             <div class="sets-list" id="sets-${index}">
                                 ${this.renderSets(ex, index)}
                             </div>
-                            <div class="mt-2">
+                            <div class="mt-2 d-flex flex-wrap gap-2">
                                 <button class="btn btn-sm btn-outline-light" 
                                         onclick="WorkoutManager.addSet(${index})">
-                                    <i class="bi bi-plus"></i> Добавить подход
+                                    <i class="bi bi-plus"></i> Подход
                                 </button>
+                                ${!isTimerRunning && !ex.completed ? `
+                                    <button class="btn btn-sm btn-outline-info" 
+                                            onclick="WorkoutManager.startExerciseTimer(${index})">
+                                        <i class="bi bi-play"></i> Старт
+                                    </button>
+                                ` : ''}
+                                ${isTimerRunning ? `
+                                    <button class="btn btn-sm btn-outline-warning" 
+                                            onclick="WorkoutManager.stopExerciseTimer(${index})">
+                                        <i class="bi bi-pause"></i> Стоп
+                                    </button>
+                                ` : ''}
                                 ${!ex.completed ? `
-                                    <button class="btn btn-sm btn-outline-success ms-2" 
+                                    <button class="btn btn-sm btn-outline-success" 
                                             onclick="WorkoutManager.completeExercise(${index})">
                                         <i class="bi bi-check-lg"></i> Завершить
                                     </button>
                                 ` : `
-                                    <button class="btn btn-sm btn-outline-warning ms-2" 
+                                    <button class="btn btn-sm btn-outline-warning" 
                                             onclick="WorkoutManager.uncompleteExercise(${index})">
                                         <i class="bi bi-arrow-counterclockwise"></i> Вернуть
                                     </button>
@@ -295,6 +321,9 @@ class WorkoutManager {
             </nav>
         `;
         
+        // Обновляем таймеры упражнений
+        this.updateExerciseTimers();
+        
         // Обработчик завершения тренировки
         const finishBtn = document.getElementById('finish-workout-btn');
         if (finishBtn) {
@@ -303,12 +332,79 @@ class WorkoutManager {
             });
         }
         
-        // Обновляем таймер
+        // Обновляем общий таймер
         this.elapsedSeconds = Math.floor((new Date() - this.startTime) / 1000);
         const timerDisplay = document.getElementById('timer-display');
         if (timerDisplay) {
             timerDisplay.textContent = Utils.formatTime(this.elapsedSeconds);
         }
+    }
+
+    static startExerciseTimer(exerciseIndex) {
+        // Останавливаем все остальные таймеры
+        for (const key in this.exerciseTimers) {
+            if (parseInt(key) !== exerciseIndex && this.exerciseTimers[key]) {
+                this.stopExerciseTimer(parseInt(key));
+            }
+        }
+        
+        this.exerciseStartTimes[exerciseIndex] = new Date();
+        
+        // Запускаем интервал обновления времени
+        this.exerciseTimers[exerciseIndex] = setInterval(() => {
+            const timeDisplay = document.getElementById('exercise-time-' + exerciseIndex);
+            if (timeDisplay) {
+                const baseTime = this.currentSession.exercises[exerciseIndex].exerciseTime || 0;
+                const currentTime = Math.floor((new Date() - this.exerciseStartTimes[exerciseIndex]) / 1000) + baseTime;
+                timeDisplay.innerHTML = '<i class="bi bi-stopwatch"></i> ' + Utils.formatTime(currentTime);
+            }
+        }, 1000);
+    }
+    
+    static stopExerciseTimer(exerciseIndex) {
+        if (this.exerciseTimers[exerciseIndex]) {
+            clearInterval(this.exerciseTimers[exerciseIndex]);
+            delete this.exerciseTimers[exerciseIndex];
+            
+            // Сохраняем накопленное время
+            const elapsed = Math.floor((new Date() - this.exerciseStartTimes[exerciseIndex]) / 1000);
+            if (!this.currentSession.exercises[exerciseIndex].exerciseTime) {
+                this.currentSession.exercises[exerciseIndex].exerciseTime = 0;
+            }
+            this.currentSession.exercises[exerciseIndex].exerciseTime += elapsed;
+            
+            delete this.exerciseStartTimes[exerciseIndex];
+            this.saveCurrentSession();
+        }
+    }
+    
+    static updateExerciseTimers() {
+        // Обновляем все активные таймеры
+        for (const index in this.exerciseTimers) {
+            if (this.exerciseTimers[index]) {
+                const timeDisplay = document.getElementById('exercise-time-' + index);
+                if (timeDisplay) {
+                    const baseTime = this.currentSession.exercises[index].exerciseTime || 0;
+                    const currentTime = Math.floor((new Date() - this.exerciseStartTimes[index]) / 1000) + baseTime;
+                    timeDisplay.innerHTML = '<i class="bi bi-stopwatch"></i> ' + Utils.formatTime(currentTime);
+                }
+            }
+        }
+    }
+    
+    static completeExercise(exerciseIndex) {
+        // Останавливаем таймер если запущен
+        if (this.exerciseTimers[exerciseIndex]) {
+            this.stopExerciseTimer(exerciseIndex);
+        }
+        
+        this.currentSession.exercises[exerciseIndex].completed = true;
+        this.saveAndRender();
+    }
+    
+    static uncompleteExercise(exerciseIndex) {
+        this.currentSession.exercises[exerciseIndex].completed = false;
+        this.saveAndRender();
     }
     
     static renderSets(exercise, exerciseIndex) {
