@@ -134,7 +134,11 @@ class HistoryManager {
                         </div>
                     `;
                 } else {
-                    setsHTML = '<p class="text-muted mb-0">Нет записанных подходов</p>';
+                    setsHTML = '${ex.exerciseTime ? `
+                                    <div class="text-muted small mb-2">
+                                        <i class="bi bi-stopwatch"></i> Время выполнения: ${Utils.formatTime(ex.exerciseTime)}
+                                    </div>
+                                ` : ''}';
                 }
                 
                 return `
@@ -219,12 +223,45 @@ class HistoryManager {
     }
     
     static async deleteSession(sessionId) {
-        const confirmed = await Utils.confirm('Удалить эту тренировку? Действие нельзя отменить.');
-        if (!confirmed) return;
+        // Создаём модальное окно подтверждения
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.setAttribute('tabindex', '-1');
+        modal.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content bg-dark text-light">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title">Подтверждение</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Вы уверены, что хотите удалить эту тренировку?</p>
+                        <p class="text-danger small">Это действие нельзя отменить.</p>
+                    </div>
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="button" class="btn btn-danger" id="confirm-delete-btn">Удалить</button>
+                    </div>
+                </div>
+            </div>
+        `;
         
-        await DB.delete('sessions', sessionId);
-        Utils.showToast('Тренировка удалена');
-        Router.navigate('history');
+        document.body.appendChild(modal);
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+        
+        // Обработчик подтверждения
+        document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+            bsModal.hide();
+            await DB.delete('sessions', sessionId);
+            Utils.showToast('Тренировка удалена');
+            Router.navigate('history');
+        });
+        
+        // Удаляем модальное окно после закрытия
+        modal.addEventListener('hidden.bs.modal', () => {
+            modal.remove();
+        });
     }
 }
 
