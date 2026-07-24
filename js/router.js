@@ -60,6 +60,11 @@ class AppRouter {
           return;
       }
       this.currentPage = path;
+      if (path === 'login') {
+        Utils.hideShellNav();
+      } else {
+        Utils.setShellNav(Utils.shellNavActiveFor(path));
+      }
     } catch (error) {
       console.error(error);
       this.container.innerHTML = `
@@ -69,6 +74,7 @@ class AppRouter {
           <button class="btn btn-primary" onclick="Router.navigate('home')">На главную</button>
         </div>
       `;
+      Utils.setShellNav('home');
     }
   }
 
@@ -140,10 +146,6 @@ class AppRouter {
     const greeting = document.getElementById('user-greeting');
     if (greeting) greeting.textContent = `Привет, ${user?.name || ''}!`;
 
-    // Patch bottom nav to include calendar/progress if old home.html
-    const nav = document.querySelector('.bottom-nav');
-    if (nav) nav.outerHTML = Utils.bottomNav('home');
-
     try {
       const sessions = await Api.listSessions();
       const today = Utils.getTodayStr();
@@ -162,20 +164,31 @@ class AppRouter {
       if (lastWorkoutInfo && completed.length) {
         const last = completed.sort((a, b) => new Date(b.startTime) - new Date(a.startTime))[0];
         lastWorkoutInfo.innerHTML = `
-          <div class="alert alert-info">
-            <strong>Последняя:</strong><br>
-            ${Utils.escapeHtml(last.templateName)} · ${Utils.formatDate(last.date + 'T12:00:00')}<br>
-            ${Utils.formatTime(last.duration || 0)}
+          <div class="home-last card">
+            <div class="card-body">
+              <div class="home-last-label">Последняя тренировка</div>
+              <div class="home-last-title">${Utils.escapeHtml(last.templateName)}</div>
+              <div class="home-last-meta">
+                ${Utils.formatDate(last.date + 'T12:00:00')} · ${Utils.formatTime(last.duration || 0)}
+              </div>
+            </div>
           </div>
         `;
       }
 
       const planned = await Api.getPlannedForDate(today);
-      if (planned && document.getElementById('start-workout-btn')) {
-        const hint = document.createElement('p');
-        hint.className = 'text-muted text-center';
-        hint.textContent = `Сегодня в плане: ${planned.templates?.name || 'свободная'}`;
-        document.getElementById('start-workout-btn').after(hint);
+      const planSlot = document.getElementById('today-plan');
+      if (planSlot) {
+        if (planned) {
+          planSlot.innerHTML = `
+            <div class="plan-chip">
+              <i class="bi bi-calendar-check"></i>
+              Сегодня в плане: <strong>${Utils.escapeHtml(planned.templates?.name || 'свободная')}</strong>
+            </div>
+          `;
+        } else {
+          planSlot.innerHTML = '';
+        }
       }
     } catch (e) {
       Utils.showToast(e.message || 'Нет сети', 'warning');
@@ -212,14 +225,6 @@ class AppRouter {
     const version = window.MYGYM_CONFIG?.APP_VERSION || '2.0.0';
     document.querySelectorAll('#app-version-display, #update-version-display, #footer-version-display')
       .forEach((el) => { if (el) el.textContent = version; });
-
-    // Ensure nav
-    const existingNav = document.querySelector('.bottom-nav');
-    if (!existingNav) {
-      document.getElementById('app').insertAdjacentHTML('beforeend', Utils.bottomNav('profile'));
-    } else {
-      existingNav.outerHTML = Utils.bottomNav('profile');
-    }
 
     document.getElementById('export-data-btn')?.addEventListener('click', () => SyncManager.exportData());
     document.getElementById('import-data-btn')?.addEventListener('click', () => {

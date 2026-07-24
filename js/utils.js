@@ -102,24 +102,56 @@ const Utils = {
     return window.confirm(message);
   },
 
-  bottomNav(active) {
-    const items = [
+  navItems() {
+    return [
       { id: 'home', icon: 'bi-house', label: 'Главная' },
       { id: 'calendar', icon: 'bi-calendar3', label: 'Календарь' },
       { id: 'templates', icon: 'bi-collection', label: 'Шаблоны' },
       { id: 'progress', icon: 'bi-graph-up', label: 'Прогресс' },
       { id: 'profile', icon: 'bi-person', label: 'Профиль' }
     ];
-    return `
-      <nav class="bottom-nav">
-        ${items.map((item) => `
-          <div class="nav-item ${active === item.id ? 'active' : ''}" onclick="Router.navigate('${item.id}')">
-            <i class="bi ${item.icon}"></i>
-            <span>${item.label}</span>
-          </div>
-        `).join('')}
-      </nav>
-    `;
+  },
+
+  // Legacy helper (pages may still call it — returns empty to avoid duplicate nav)
+  bottomNav(_active) {
+    return '';
+  },
+
+  ensureShellNav() {
+    return document.getElementById('shell-nav');
+  },
+
+  setShellNav(active) {
+    const nav = this.ensureShellNav();
+    if (!nav) return;
+    nav.classList.remove('is-hidden');
+    document.body.classList.add('has-shell-nav');
+    nav.querySelectorAll('[data-nav]').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.nav === active);
+    });
+  },
+
+  hideShellNav() {
+    const nav = document.getElementById('shell-nav');
+    if (nav) nav.classList.add('is-hidden');
+    document.body.classList.remove('has-shell-nav');
+  },
+
+  shellNavActiveFor(path) {
+    const map = {
+      home: 'home',
+      workout: 'home',
+      'active-workout': 'home',
+      history: 'home',
+      'history-detail': 'home',
+      calendar: 'calendar',
+      templates: 'templates',
+      'template-edit': 'templates',
+      progress: 'progress',
+      profile: 'profile',
+      exercises: 'profile'
+    };
+    return map[path] || 'home';
   }
 };
 

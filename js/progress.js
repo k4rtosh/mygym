@@ -1,48 +1,126 @@
 class ProgressManager {
   static chart = null;
+  static allExercises = [];
+  static templates = [];
+  static showAll = false;
 
   static async load() {
     const container = document.getElementById('app');
-    let exercises = [];
     try {
-      exercises = await Api.listExercises();
+      const [exercises, templates] = await Promise.all([
+        Api.listExercises(),
+        Api.listTemplates()
+      ]);
+      this.allExercises = exercises;
+      this.templates = templates;
       await DB.cacheExercises(exercises);
-    } catch (_) {
-      exercises = (await DB.loadExercisesCache()) || [];
+    } catch (e) {
+      this.allExercises = (await DB.loadExercisesCache()) || [];
+      this.templates = [];
+      Utils.showToast(e.message || 'Нет сети', 'warning');
     }
 
-    const options = exercises
-      .map((ex) => `<option value="${Utils.escapeHtml(ex.id)}">${Utils.escapeHtml(ex.name)}</option>`)
+    this.showAll = this.templates.length === 0;
+    const defaultTemplateId = this.templates[0]?.id || '';
+
+    const templateOptions = this.templates
+      .map((t) => `<option value="${Utils.escapeHtml(t.id)}">${Utils.escapeHtml(t.name)}</option>`)
       .join('');
 
     container.innerHTML = `
-      <div class="app-header fade-in"><h4>Прогресс</h4></div>
+      <div class="app-header fade-in">
+        <h4>Прогресс</h4>
+        <p class="text-muted mb-0 small">Вес и объём по упражнению</p>
+      </div>
       <div class="container fade-in">
-        <label class="form-label">Упражнение</label>
-        <input type="text" class="form-control mb-2" id="progress-search" placeholder="Поиск...">
-        <select class="form-select mb-3" id="progress-exercise" size="8">
-          ${options || '<option disabled>Нет упражнений</option>'}
-        </select>
         <div class="card mb-3">
+          <div class="card-body">
+            <label class="form-label">Шаблон</label>
+            <select class="form-select mb-3" id="progress-template" ${this.templates.length ? '' : 'disabled'}>
+              ${templateOptions || '<option value="">Нет шаблонов</option>'}
+            </select>
+
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <label class="form-label mb-0">Упражнение</label>
+              <button type="button" class="btn btn-sm btn-outline-light" id="progress-toggle-all">
+                ${this.showAll ? 'Только из шаблона' : 'Показать все'}
+              </button>
+            </div>
+            <input type="text" class="form-control mb-2" id="progress-search" placeholder="Поиск...">
+            <select class="form-select mb-0" id="progress-exercise" size="6"></select>
+            <p class="text-muted small mt-2 mb-0" id="progress-source-hint"></p>
+          </div>
+        </div>
+
+        <div class="card mb-3 chart-card">
           <div class="card-body">
             <canvas id="progress-chart" height="220"></canvas>
             <p class="text-muted small mt-2 mb-0" id="progress-hint">Выбери упражнение</p>
           </div>
         </div>
       </div>
-      ${Utils.bottomNav('progress')}
     `;
 
-    const select = document.getElementById('progress-exercise');
+    const templateSelect = document.getElementById('progress-template');
+    const exerciseSelect = document.getElementById('progress-exercise');
     const search = document.getElementById('progress-search');
-    search.addEventListener('input', () => {
-      const q = search.value.toLowerCase();
-      Array.from(select.options).forEach((opt) => {
-        opt.hidden = q && !opt.text.toLowerCase().includes(q);
-      });
+    const toggleBtn = document.getElementById('progress-toggle-all');
+
+    if (defaultTemplateId) templateSelect.value = defaultTemplateId;
+
+    const refreshList = () => {
+      this.fillExerciseSelect(templateSelect.value, search.value);
+    };
+
+    templateSelect.addEventListener('change', () => {
+      if (!this.showAll) refreshList();
     });
-    select.addEventListener('change', () => this.renderChart(select.value));
-    if (select.value) this.renderChart(select.value);
+    search.addEventListener('input', refreshList);
+    toggleBtn.addEventListener('click', () => {
+      this.showAll = !this.showAll;
+      toggleBtn.textContent = this.showAll ? 'Только из шаблона' : 'Показать все';
+      refreshList();
+    });
+    exerciseSelect.addEventListener('change', () => this.renderChart(exerciseSelect.value));
+
+    refreshList();
+    if (exerciseSelect.value) this.renderChart(exerciseSelect.value);
+  }
+
+  static fillExerciseSelect(templateId, searchQuery) {
+    const select = document.getElementById('progress-exercise');
+    const hint = document.getElementById('progress-source-hint');
+    if (!select) return;
+
+    let list = this.allExercises;
+    if (!this.showAll && templateId) {
+      const template = this.templates.find((t) => t.id === templateId);
+      const ids = new Set((template?.exercises || []).map((e) => e.exerciseId));
+      list = this.allExercises.filter((ex) => ids.has(ex.id));
+      if (hint) {
+        hint.textContent = list.length
+          ? `${list.length} упр. из шаблона «${template?.name || ''}»`
+          : 'В шаблоне пока нет упражнений — добавь их или нажми «Показать все»';
+      }
+    } else if (hint) {
+      hint.textContent = `Вся база · ${this.allExercises.length} упражнений`;
+    }
+
+    const q = (searchQuery || '').toLowerCase().trim();
+    if (q) {
+      list = list.filter((ex) => ex.name.toLowerCase().includes(q));
+    }
+
+    const prev = select.value;
+    select.innerHTML = list.length
+      ? list.map((ex) =>
+        `<option value="${Utils.escapeHtml(ex.id)}">${Utils.escapeHtml(ex.name)}</option>`
+      ).join('')
+      : '<option value="" disabled>Ничего не найдено</option>';
+
+    if (prev && list.some((ex) => ex.id === prev)) {
+      select.value = prev;
+    }
   }
 
   static async renderChart(exerciseId) {
@@ -78,17 +156,21 @@ class ProgressManager {
           {
             label: 'Макс. вес (кг)',
             data: points.map((p) => p.maxWeight),
-            borderColor: '#e94560',
-            backgroundColor: 'rgba(233,69,96,0.15)',
-            tension: 0.25,
+            borderColor: '#ff5a6a',
+            backgroundColor: 'rgba(255,90,106,0.12)',
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: 3,
             yAxisID: 'y'
           },
           {
             label: 'Объём',
             data: points.map((p) => p.volume),
-            borderColor: '#0dcaf0',
-            backgroundColor: 'rgba(13,202,240,0.1)',
-            tension: 0.25,
+            borderColor: '#5ec8ff',
+            backgroundColor: 'rgba(94,200,255,0.1)',
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: 3,
             yAxisID: 'y1'
           }
         ]
@@ -100,24 +182,24 @@ class ProgressManager {
           y: {
             type: 'linear',
             position: 'left',
-            title: { display: true, text: 'Вес', color: '#aaa' },
-            ticks: { color: '#aaa' },
-            grid: { color: 'rgba(255,255,255,0.08)' }
+            title: { display: true, text: 'Вес', color: '#9aa3b5' },
+            ticks: { color: '#9aa3b5' },
+            grid: { color: 'rgba(255,255,255,0.06)' }
           },
           y1: {
             type: 'linear',
             position: 'right',
-            title: { display: true, text: 'Объём', color: '#aaa' },
-            ticks: { color: '#aaa' },
+            title: { display: true, text: 'Объём', color: '#9aa3b5' },
+            ticks: { color: '#9aa3b5' },
             grid: { drawOnChartArea: false }
           },
           x: {
-            ticks: { color: '#aaa', maxRotation: 45 },
-            grid: { color: 'rgba(255,255,255,0.05)' }
+            ticks: { color: '#9aa3b5', maxRotation: 45 },
+            grid: { color: 'rgba(255,255,255,0.04)' }
           }
         },
         plugins: {
-          legend: { labels: { color: '#e0e0e0' } }
+          legend: { labels: { color: '#e8ecf4' } }
         }
       }
     });
