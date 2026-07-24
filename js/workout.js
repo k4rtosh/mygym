@@ -172,8 +172,6 @@ class WorkoutManager {
         notes: '',
         exercises: (template.exercises || []).map((ex) => ({
           exerciseId: ex.exerciseId,
-          plannedSets: ex.plannedSets || 3,
-          plannedReps: ex.plannedReps || 10,
           sets: [],
           completed: false,
           exerciseTime: 0
@@ -417,7 +415,7 @@ class WorkoutManager {
     const last = ex.sets[ex.sets.length - 1];
     ex.sets.push({
       weight: last ? last.weight : 0,
-      reps: last ? last.reps : (ex.plannedReps || 0)
+      reps: last ? last.reps : 0
     });
     this.startRestTimer(90);
     this.saveAndRender();
@@ -536,14 +534,12 @@ class WorkoutManager {
 
     modal.querySelectorAll('.exercise-select-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        this.currentSession.exercises.push({
-          exerciseId: btn.dataset.exerciseId,
-          plannedSets: 3,
-          plannedReps: 10,
-          sets: [],
-          completed: false,
-          exerciseTime: 0
-        });
+                this.currentSession.exercises.push({
+                  exerciseId: btn.dataset.exerciseId,
+                  sets: [],
+                  completed: false,
+                  exerciseTime: 0
+                });
         this.exerciseTimes[this.currentSession.exercises.length - 1] = 0;
         this.saveAndRender();
         bsModal.hide();

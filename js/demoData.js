@@ -38,27 +38,27 @@ const DemoData = {
     const push = await Api.createTemplate({
       name: 'Тест · Жим / грудь',
       exercises: [
-        { exerciseId: 'chest_1', plannedSets: 4, plannedReps: 8 },
-        { exerciseId: 'chest_4', plannedSets: 3, plannedReps: 10 },
-        { exerciseId: 'chest_2', plannedSets: 3, plannedReps: 10 }
+        { exerciseId: 'chest_1' },
+        { exerciseId: 'chest_4' },
+        { exerciseId: 'chest_2' }
       ]
     });
 
     const pull = await Api.createTemplate({
       name: 'Тест · Спина',
       exercises: [
-        { exerciseId: 'back_1', plannedSets: 4, plannedReps: 8 },
-        { exerciseId: 'back_3', plannedSets: 3, plannedReps: 10 },
-        { exerciseId: 'back_5', plannedSets: 3, plannedReps: 12 }
+        { exerciseId: 'back_1' },
+        { exerciseId: 'back_3' },
+        { exerciseId: 'back_5' }
       ]
     });
 
     const legs = await Api.createTemplate({
       name: 'Тест · Ноги',
       exercises: [
-        { exerciseId: 'legs_1', plannedSets: 4, plannedReps: 8 },
-        { exerciseId: 'legs_3', plannedSets: 3, plannedReps: 10 },
-        { exerciseId: 'legs_5', plannedSets: 3, plannedReps: 12 }
+        { exerciseId: 'legs_1' },
+        { exerciseId: 'legs_3' },
+        { exerciseId: 'legs_5' }
       ]
     });
 
@@ -87,8 +87,6 @@ const DemoData = {
         const w = p.base + idx * 2.5;
         return {
           exerciseId,
-          plannedSets: 3,
-          plannedReps: 8,
           completed: true,
           exerciseTime: 300 + idx * 40,
           sets: [
