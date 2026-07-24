@@ -7,6 +7,7 @@ class WorkoutManager {
     static elapsedSeconds = 0;
     static exerciseTimers = {};
     static exerciseTimes = {};
+    static exerciseTimerRunning = {};
     
     static async loadStartWorkout() {
         const user = Auth.getCurrentUser();
@@ -121,7 +122,7 @@ class WorkoutManager {
                     plannedReps: ex.plannedReps || 10,
                     sets: [],
                     completed: false,
-                    exerciseTime: 0
+                    exerciseTime: 0  // Время выполнения упражнения в секундах
                 };
             });
         }
@@ -229,11 +230,15 @@ class WorkoutManager {
                                 <span class="badge bg-info" id="exercise-timer-${index}">
                                     ${Utils.formatTime(timerValue)}
                                 </span>
-                                <button class="btn btn-sm ${isTimerRunning ? 'btn-danger' : 'btn-outline-primary'}" 
-                                        id="timer-btn-${index}"
-                                        onclick="WorkoutManager.toggleExerciseTimer(${index})">
-                                    ${isTimerRunning ? '⏹ Стоп' : '▶ Старт'}
-                                </button>
+                                ${!ex.completed ? `
+                                    <button class="btn btn-sm ${isTimerRunning ? 'btn-danger' : 'btn-outline-primary'}" 
+                                            id="timer-btn-${index}"
+                                            onclick="WorkoutManager.toggleExerciseTimer(${index})">
+                                        ${isTimerRunning ? '⏹ Стоп' : '▶ Старт'}
+                                    </button>
+                                ` : `
+                                    <span class="badge bg-secondary">⏱ ${Utils.formatTime(timerValue)}</span>
+                                `}
                                 ${ex.completed ? '<span class="badge bg-success">✅</span>' : ''}
                             </div>
                         </div>
@@ -399,13 +404,29 @@ class WorkoutManager {
     }
     
     static completeExercise(exerciseIndex) {
-        this.currentSession.exercises[exerciseIndex].completed = true;
+        // Останавливаем таймер упражнения
+        if (this.exerciseTimers[exerciseIndex]) {
+            this.stopExerciseTimer(exerciseIndex);
+        }
+        
+        // Сохраняем время упражнения
+        const exercise = this.currentSession.exercises[exerciseIndex];
+        exercise.exerciseTime = this.exerciseTimes[exerciseIndex] || exercise.exerciseTime || 0;
+        exercise.completed = true;
+        
         this.saveAndRender();
+        Utils.showToast('Упражнение завершено! ⏱ Время: ' + Utils.formatTime(exercise.exerciseTime));
     }
     
     static uncompleteExercise(exerciseIndex) {
-        this.currentSession.exercises[exerciseIndex].completed = false;
+        const exercise = this.currentSession.exercises[exerciseIndex];
+        exercise.completed = false;
+        
+        // Восстанавливаем таймер
+        this.exerciseTimes[exerciseIndex] = exercise.exerciseTime || 0;
+        
         this.saveAndRender();
+        Utils.showToast('Упражнение возвращено');
     }
     
     static async showAddExerciseModal() {
@@ -490,8 +511,16 @@ class WorkoutManager {
     }
     
     static async finishWorkout() {
-        const confirmed = await Utils.confirm('Завершить тренировку?');
-        if (!confirmed) return;
+        // Проверяем, есть ли незавершённые упражнения
+        const incompleteExercises = this.currentSession.exercises.filter(ex => !ex.completed);
+        
+        if (incompleteExercises.length > 0) {
+            const confirmed = await Utils.confirm(
+                `Есть ${incompleteExercises.length} незавершённых упражнений.\n` +
+                'Всё равно завершить тренировку?'
+            );
+            if (!confirmed) return;
+        }
         
         this.stopTimer();
         
@@ -501,6 +530,8 @@ class WorkoutManager {
                 if (this.exerciseTimers[index]) {
                     this.stopExerciseTimer(index);
                 }
+                // Сохраняем финальное время
+                ex.exerciseTime = this.exerciseTimes[index] || ex.exerciseTime || 0;
             });
         }
         
@@ -511,18 +542,21 @@ class WorkoutManager {
         await DB.put('sessions', this.currentSession);
         await DB.delete('settings', 'activeSession');
         
-        Utils.showToast('Тренировка завершена!');
+        // Подсчёт общего времени упражнений
+        const totalExerciseTime = this.currentSession.exercises.reduce((sum, ex) => sum + (ex.exerciseTime || 0), 0);
+        Utils.showToast(`Тренировка завершена! ⏱ Общее время упражнений: ${Utils.formatTime(totalExerciseTime)}`);
         
         this.currentSession = null;
         this.startTime = null;
         this.elapsedSeconds = 0;
         this.exerciseTimers = {};
         this.exerciseTimes = {};
+        this.exerciseTimerRunning = {};
         
         Router.navigate('history');
     }
     
-    // === НОВЫЕ МЕТОДЫ ДЛЯ ТАЙМЕРОВ УПРАЖНЕНИЙ ===
+    // === МЕТОДЫ ДЛЯ ТАЙМЕРОВ УПРАЖНЕНИЙ ===
     
     static startExerciseTimer(exerciseIndex) {
         if (this.exerciseTimers[exerciseIndex]) {
@@ -557,7 +591,7 @@ class WorkoutManager {
             this.exerciseTimers[exerciseIndex] = null;
             
             if (this.currentSession && this.currentSession.exercises[exerciseIndex]) {
-                this.currentSession.exercises[exerciseIndex].exerciseTime = this.exerciseTimes[exerciseIndex];
+                this.currentSession.exercises[exerciseIndex].exerciseTime = this.exerciseTimes[exerciseIndex] || 0;
                 this.saveCurrentSession();
             }
             
@@ -566,6 +600,13 @@ class WorkoutManager {
     }
     
     static toggleExerciseTimer(exerciseIndex) {
+        // Проверяем, не завершено ли упражнение
+        if (this.currentSession && this.currentSession.exercises[exerciseIndex] && 
+            this.currentSession.exercises[exerciseIndex].completed) {
+            Utils.showToast('Упражнение уже завершено', 'warning');
+            return;
+        }
+        
         if (this.exerciseTimers[exerciseIndex]) {
             this.stopExerciseTimer(exerciseIndex);
         } else {
