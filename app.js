@@ -5,29 +5,41 @@ const APP_VERSION_KEY = 'appVersion';
 // Инициализация приложения
 async function initApp() {
     try {
-        // Проверяем версию приложения
+        console.log('🚀 Запуск приложения...');
+        
+        // 1. ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ
+        console.log('🔄 Инициализация IndexedDB...');
+        await DB.init();
+        
+        if (!DB.isReady()) {
+            throw new Error('База данных не инициализирована');
+        }
+        console.log('✅ IndexedDB готова');
+        
+        // 2. ПРОВЕРКА ВЕРСИИ
+        console.log('🔄 Проверка версии приложения...');
         const savedVersion = await DB.get('settings', APP_VERSION_KEY);
         
         if (!savedVersion || savedVersion.value !== APP_VERSION) {
             console.log('🔄 Обнаружена новая версия приложения!');
             
-            // Если версия изменилась - обновляем упражнения
             try {
                 const exercisesResponse = await fetch('data/exercises.json');
+                if (!exercisesResponse.ok) {
+                    throw new Error(`HTTP ${exercisesResponse.status}`);
+                }
                 const exercisesData = await exercisesResponse.json();
                 await DB.updateExercises(exercisesData.exercises);
-                console.log('✅ Упражнения обновлены для новой версии');
+                console.log('✅ Упражнения обновлены');
             } catch (e) {
-                console.log('⚠️ Ошибка обновления упражнений:', e);
+                console.warn('⚠️ Ошибка обновления упражнений:', e);
             }
             
-            // Сохраняем новую версию
             await DB.put('settings', {
                 key: APP_VERSION_KEY,
                 value: APP_VERSION
             });
             
-            // Обновляем Service Worker
             if ('serviceWorker' in navigator) {
                 try {
                     const registrations = await navigator.serviceWorker.getRegistrations();
@@ -36,135 +48,116 @@ async function initApp() {
                     }
                     console.log('✅ Service Worker обновлён');
                 } catch (e) {
-                    console.log('⚠️ Ошибка обновления Service Worker:', e);
+                    console.warn('⚠️ Ошибка обновления SW:', e);
                 }
             }
             
             Utils.showToast(`Приложение обновлено до версии ${APP_VERSION}! 🎉`);
         }
         
-        // Инициализируем базу данных
-        await DB.init();
-        
-        // Загружаем начальные данные
+        // 3. ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ
+        console.log('🔄 Загрузка пользователей...');
         try {
             const usersResponse = await fetch('data/users.json');
+            if (!usersResponse.ok) {
+                throw new Error(`HTTP ${usersResponse.status}`);
+            }
             const usersData = await usersResponse.json();
             await DB.seedUsers(usersData.users);
         } catch (e) {
             console.log('Пользователи уже загружены или файл недоступен');
         }
         
-        // Проверяем активную сессию тренировки
-        const activeSession = await DB.get('settings', 'activeSession');
-        if (activeSession && activeSession.sessionId) {
-            const session = await DB.get('sessions', activeSession.sessionId);
-            if (session && !session.endTime) {
-                // Есть незавершенная тренировка - предлагаем продолжить
-                const confirmed = await Utils.confirm('У вас есть незавершенная тренировка. Продолжить?');
-                if (confirmed) {
-                    Router.navigate('active-workout', {sessionId: activeSession.sessionId});
-                    return;
+        // 4. ПРОВЕРКА АКТИВНОЙ ТРЕНИРОВКИ
+        console.log('🔄 Проверка активной тренировки...');
+        try {
+            const activeSession = await DB.get('settings', 'activeSession');
+            if (activeSession && activeSession.sessionId) {
+                const session = await DB.get('sessions', activeSession.sessionId);
+                if (session && !session.endTime) {
+                    const confirmed = await Utils.confirm('У вас есть незавершенная тренировка. Продолжить?');
+                    if (confirmed) {
+                        Router.navigate('active-workout', {sessionId: activeSession.sessionId});
+                        return;
+                    } else {
+                        await DB.delete('settings', 'activeSession');
+                    }
                 } else {
                     await DB.delete('settings', 'activeSession');
                 }
-            } else {
-                await DB.delete('settings', 'activeSession');
             }
+        } catch (e) {
+            console.warn('⚠️ Ошибка проверки активной тренировки:', e);
         }
         
-        // Инициализируем авторизацию
+        // 5. АВТОРИЗАЦИЯ
+        console.log('🔄 Проверка авторизации...');
         const isLoggedIn = await Auth.init();
         
-        // Запускаем роутер
         if (isLoggedIn) {
+            console.log('✅ Авторизация успешна, переход на главную');
             await Router.navigate('home');
         } else {
+            console.log('🔑 Требуется авторизация');
             await Router.navigate('login');
         }
         
+        console.log('✅ Приложение запущено успешно!');
+        
     } catch (error) {
-        console.error('Ошибка инициализации:', error);
+        console.error('❌ Ошибка инициализации:', error);
+        
+        let errorMessage = error.message || 'Неизвестная ошибка';
+        let suggestion = 'Попробуйте перезагрузить страницу (Ctrl+F5)';
+        
+        if (errorMessage.includes('transaction') || errorMessage.includes('IndexedDB')) {
+            suggestion = 'Очистите кэш: нажмите Ctrl+Shift+Delete, выберите "Кэш" и перезагрузите страницу';
+        }
+        
         document.getElementById('app').innerHTML = `
             <div class="container mt-5 text-center">
-                <h3>Ошибка инициализации</h3>
-                <p>${error.message}</p>
-                <button class="btn btn-primary" onclick="location.reload()">Перезагрузить</button>
+                <h3>❌ Ошибка инициализации</h3>
+                <div class="alert alert-danger mt-3">
+                    <strong>${errorMessage}</strong>
+                </div>
+                <p class="text-muted">${suggestion}</p>
+                <button class="btn btn-primary mt-2" onclick="location.reload()">🔄 Перезагрузить</button>
+                <button class="btn btn-warning mt-2 ms-2" onclick="clearCacheAndReload()">🧹 Очистить кэш</button>
             </div>
         `;
     }
 }
 
-// Глобальная функция для полного обновления приложения
-async function updateApp() {
-    const confirmed = await Utils.confirm(
-        'Обновить приложение?\n\n' +
-        'Будут загружены последние упражнения и очищен кэш.\n' +
-        'Ваши тренировки и шаблоны сохранятся.'
-    );
-    
-    if (!confirmed) return;
-    
+// Очистка кэша и перезагрузка
+async function clearCacheAndReload() {
     try {
-        Utils.showToast('🔄 Обновление приложения...', 'info');
-        
-        // 1. Обновляем упражнения
-        const exercisesResponse = await fetch('data/exercises.json');
-        const exercisesData = await exercisesResponse.json();
-        await DB.updateExercises(exercisesData.exercises);
-        
-        // 2. Сохраняем новую версию
-        await DB.put('settings', {
-            key: APP_VERSION_KEY,
-            value: APP_VERSION
-        });
-        
-        // 3. Обновляем Service Worker
         if ('serviceWorker' in navigator) {
             const registrations = await navigator.serviceWorker.getRegistrations();
             for (let registration of registrations) {
-                await registration.update();
+                await registration.unregister();
             }
         }
         
-        // 4. Показываем сообщение
-        Utils.showToast(`✅ Приложение обновлено до версии ${APP_VERSION}!`, 'success');
-        
-        // 5. Предлагаем перезагрузить страницу
-        const reload = await Utils.confirm('Для полного обновления нужно перезагрузить страницу. Сделать это сейчас?');
-        if (reload) {
-            location.reload(true);
+        if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            for (const cacheName of cacheNames) {
+                await caches.delete(cacheName);
+            }
         }
-    } catch (error) {
-        console.error('Ошибка обновления:', error);
-        Utils.showToast('❌ Ошибка обновления: ' + error.message, 'danger');
+        
+        location.reload(true);
+    } catch (e) {
+        console.error('Ошибка очистки кэша:', e);
+        location.reload(true);
     }
 }
 
-// Глобальная функция для экспорта данных
-async function exportData() {
-    await SyncManager.exportData();
-}
-
-// Глобальная функция для импорта данных
-function importData() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            await SyncManager.importData(file);
-        }
-    };
-    input.click();
-}
-
-// Делаем функции глобальными
+// Глобальные функции
 window.APP_VERSION = APP_VERSION;
 window.updateApp = updateApp;
 window.exportData = exportData;
 window.importData = importData;
+window.clearCacheAndReload = clearCacheAndReload;
 
-// Запускаем приложение
+// Запуск
 document.addEventListener('DOMContentLoaded', initApp);
