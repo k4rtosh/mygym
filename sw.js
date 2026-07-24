@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mygym-v2.4.1';
+const CACHE_NAME = 'mygym-v2.4.2';
 const APP_SHELL = [
   '/mygym/',
   '/mygym/index.html',
@@ -22,7 +22,9 @@ const APP_SHELL = [
   '/mygym/pages/home.html',
   '/mygym/pages/login.html',
   '/mygym/pages/profile.html',
-  '/mygym/manifest.json'
+  '/mygym/manifest.json',
+  '/mygym/icons/icon-192x192.png',
+  '/mygym/icons/favicon.svg'
 ];
 
 self.addEventListener('install', (event) => {

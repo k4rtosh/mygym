@@ -7,7 +7,7 @@ URL: `https://gkcjwunfgzhidqyyhhik.supabase.co`
 
 - Таблицы: `profiles`, `exercises`, `templates`, `sessions`, `planned_workouts`
 - RLS + триггер создания профиля при регистрации
-- В каталог залито **98 упражнений**
+- В каталог залито **~188 упражнений**
 
 ## Осталось сделать тебе в Dashboard (1 минута)
 
