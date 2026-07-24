@@ -1,0 +1,253 @@
+class AppRouter {
+  constructor() {
+    this.currentPage = null;
+    this.appContainer = null;
+  }
+
+  get container() {
+    if (!this.appContainer) this.appContainer = document.getElementById('app');
+    return this.appContainer;
+  }
+
+  async navigate(path, params = {}) {
+    if (path !== 'login' && !Auth.isLoggedIn()) {
+      path = 'login';
+    }
+
+    try {
+      switch (path) {
+        case 'login':
+          this.container.innerHTML = await this.fetchPage('pages/login.html');
+          await this.initLoginPage();
+          break;
+        case 'home':
+          this.container.innerHTML = await this.fetchPage('pages/home.html');
+          await this.initHomePage();
+          break;
+        case 'templates':
+          await TemplatesManager.loadTemplatesList();
+          break;
+        case 'template-edit':
+          await TemplatesManager.loadTemplateEditor(params.id);
+          break;
+        case 'workout':
+          await WorkoutManager.loadStartWorkout();
+          break;
+        case 'active-workout':
+          await WorkoutManager.startActiveWorkout(params.sessionId);
+          break;
+        case 'history':
+          await HistoryManager.loadHistoryList();
+          break;
+        case 'history-detail':
+          await HistoryManager.loadHistoryDetail(params.sessionId);
+          break;
+        case 'exercises':
+          await ExercisesManager.loadExercisesList();
+          break;
+        case 'profile':
+          this.container.innerHTML = await this.fetchPage('pages/profile.html');
+          await this.initProfilePage();
+          break;
+        case 'calendar':
+          await CalendarManager.load();
+          break;
+        case 'progress':
+          await ProgressManager.load();
+          break;
+        default:
+          await this.navigate('home');
+          return;
+      }
+      this.currentPage = path;
+    } catch (error) {
+      console.error(error);
+      this.container.innerHTML = `
+        <div class="container mt-5 text-center">
+          <h3>Ошибка</h3>
+          <p>${Utils.escapeHtml(error.message)}</p>
+          <button class="btn btn-primary" onclick="Router.navigate('home')">На главную</button>
+        </div>
+      `;
+    }
+  }
+
+  async fetchPage(url) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Не удалось загрузить страницу');
+    return response.text();
+  }
+
+  async initLoginPage() {
+    const tabLogin = document.getElementById('tab-login');
+    const tabSignup = document.getElementById('tab-signup');
+    const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
+
+    const showLogin = () => {
+      loginForm.classList.remove('d-none');
+      signupForm.classList.add('d-none');
+      tabLogin.classList.add('active');
+      tabSignup.classList.remove('active');
+    };
+    const showSignup = () => {
+      signupForm.classList.remove('d-none');
+      loginForm.classList.add('d-none');
+      tabSignup.classList.add('active');
+      tabLogin.classList.remove('active');
+    };
+
+    tabLogin?.addEventListener('click', showLogin);
+    tabSignup?.addEventListener('click', showSignup);
+
+    document.getElementById('login-submit')?.addEventListener('click', async () => {
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      try {
+        await Auth.signIn(email, password);
+        Utils.showToast('Добро пожаловать!');
+        await Router.navigate('home');
+      } catch (e) {
+        Utils.showToast(e.message || 'Ошибка входа', 'danger');
+      }
+    });
+
+    document.getElementById('signup-submit')?.addEventListener('click', async () => {
+      const name = document.getElementById('signup-name').value;
+      const email = document.getElementById('signup-email').value;
+      const password = document.getElementById('signup-password').value;
+      if (!password || password.length < 6) {
+        Utils.showToast('Пароль минимум 6 символов', 'warning');
+        return;
+      }
+      try {
+        const result = await Auth.signUp(email, password, name);
+        if (result.needsConfirmation) {
+          Utils.showToast('Проверь почту для подтверждения, затем войди', 'info');
+          showLogin();
+        } else {
+          Utils.showToast('Аккаунт создан!');
+          await Router.navigate('home');
+        }
+      } catch (e) {
+        Utils.showToast(e.message || 'Ошибка регистрации', 'danger');
+      }
+    });
+  }
+
+  async initHomePage() {
+    const user = Auth.getCurrentUser();
+    const greeting = document.getElementById('user-greeting');
+    if (greeting) greeting.textContent = `Привет, ${user?.name || ''}!`;
+
+    // Patch bottom nav to include calendar/progress if old home.html
+    const nav = document.querySelector('.bottom-nav');
+    if (nav) nav.outerHTML = Utils.bottomNav('home');
+
+    try {
+      const sessions = await Api.listSessions();
+      const today = Utils.getTodayStr();
+      const todaySessions = sessions.filter((s) => s.date === today && s.completed);
+      const weekSessions = this.getThisWeekSessions(sessions.filter((s) => s.completed));
+
+      const statToday = document.getElementById('stat-today');
+      const statWeek = document.getElementById('stat-week');
+      const statTotal = document.getElementById('stat-total');
+      if (statToday) statToday.textContent = todaySessions.length;
+      if (statWeek) statWeek.textContent = weekSessions.length;
+      if (statTotal) statTotal.textContent = sessions.filter((s) => s.completed).length;
+
+      const lastWorkoutInfo = document.getElementById('last-workout-info');
+      const completed = sessions.filter((s) => s.completed && s.endTime);
+      if (lastWorkoutInfo && completed.length) {
+        const last = completed.sort((a, b) => new Date(b.startTime) - new Date(a.startTime))[0];
+        lastWorkoutInfo.innerHTML = `
+          <div class="alert alert-info">
+            <strong>Последняя:</strong><br>
+            ${Utils.escapeHtml(last.templateName)} · ${Utils.formatDate(last.date + 'T12:00:00')}<br>
+            ${Utils.formatTime(last.duration || 0)}
+          </div>
+        `;
+      }
+
+      const planned = await Api.getPlannedForDate(today);
+      if (planned && document.getElementById('start-workout-btn')) {
+        const hint = document.createElement('p');
+        hint.className = 'text-muted text-center';
+        hint.textContent = `Сегодня в плане: ${planned.templates?.name || 'свободная'}`;
+        document.getElementById('start-workout-btn').after(hint);
+      }
+    } catch (e) {
+      Utils.showToast(e.message || 'Нет сети', 'warning');
+    }
+
+    document.getElementById('start-workout-btn')?.addEventListener('click', () => {
+      Router.navigate('workout');
+    });
+  }
+
+  getThisWeekSessions(sessions) {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    const day = (now.getDay() + 6) % 7;
+    startOfWeek.setDate(now.getDate() - day);
+    startOfWeek.setHours(0, 0, 0, 0);
+    return sessions.filter((s) => {
+      const d = new Date(s.date + 'T12:00:00');
+      return d >= startOfWeek;
+    });
+  }
+
+  async initProfilePage() {
+    const user = Auth.getCurrentUser();
+    const profileName = document.getElementById('profile-name');
+    const profileJoinDate = document.getElementById('profile-join-date');
+    if (profileName) profileName.textContent = user?.name || '';
+    if (profileJoinDate) {
+      profileJoinDate.textContent = user?.joinDate
+        ? Utils.formatDate(user.joinDate)
+        : '—';
+    }
+
+    const version = window.MYGYM_CONFIG?.APP_VERSION || '2.0.0';
+    document.querySelectorAll('#app-version-display, #update-version-display, #footer-version-display')
+      .forEach((el) => { if (el) el.textContent = version; });
+
+    // Ensure nav
+    const existingNav = document.querySelector('.bottom-nav');
+    if (!existingNav) {
+      document.getElementById('app').insertAdjacentHTML('beforeend', Utils.bottomNav('profile'));
+    } else {
+      existingNav.outerHTML = Utils.bottomNav('profile');
+    }
+
+    document.getElementById('export-data-btn')?.addEventListener('click', () => SyncManager.exportData());
+    document.getElementById('import-data-btn')?.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (file) await SyncManager.importData(file);
+      };
+      input.click();
+    });
+
+    document.getElementById('open-exercises-btn')?.addEventListener('click', () => {
+      Router.navigate('exercises');
+    });
+
+    document.getElementById('update-app-btn')?.addEventListener('click', () => {
+      if (window.clearCacheAndReload) window.clearCacheAndReload();
+    });
+
+    document.getElementById('logout-btn')?.addEventListener('click', async () => {
+      if (!(await Utils.confirm('Выйти?'))) return;
+      await Auth.logout();
+      Router.navigate('login');
+    });
+  }
+}
+
+const Router = new AppRouter();
+window.Router = Router;

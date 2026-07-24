@@ -1,0 +1,49 @@
+<div class="app-header fade-in">
+  <div class="d-flex align-items-center">
+    <button class="btn btn-link text-white me-2" onclick="Router.navigate('home')">
+      <i class="bi bi-arrow-left"></i>
+    </button>
+    <h4 class="mb-0">Профиль</h4>
+  </div>
+</div>
+
+<div class="container fade-in">
+  <div class="card mb-3">
+    <div class="card-body text-center">
+      <div class="user-avatar mb-3">
+        <i class="bi bi-person-circle display-1"></i>
+      </div>
+      <h5 id="profile-name"></h5>
+      <p class="text-muted">С нами с <span id="profile-join-date"></span></p>
+      <div class="mt-2">
+        <span class="badge bg-info">Версия <span id="app-version-display">2.0.0</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header"><h6 class="mb-0">Данные</h6></div>
+    <div class="card-body">
+      <button class="btn btn-outline-light w-100 mb-2" id="export-data-btn">
+        <i class="bi bi-download"></i> Экспорт JSON
+      </button>
+      <button class="btn btn-outline-light w-100 mb-2" id="import-data-btn">
+        <i class="bi bi-upload"></i> Импорт старого бэкапа в облако
+      </button>
+      <button class="btn btn-outline-info w-100 mb-2" id="open-exercises-btn">
+        <i class="bi bi-book"></i> База упражнений
+      </button>
+      <button class="btn btn-outline-primary w-100" id="update-app-btn">
+        <i class="bi bi-cloud-download"></i> Обновить кэш приложения
+      </button>
+    </div>
+  </div>
+
+  <button class="btn btn-outline-danger w-100" id="logout-btn">
+    <i class="bi bi-box-arrow-right"></i> Выйти
+  </button>
+
+  <div class="text-center mt-4">
+    <small class="text-muted">MyGym v<span id="footer-version-display">2.0.0</span> · данные в Supabase</small>
+  </div>
+</div>

@@ -1,0 +1,49 @@
+<div class="login-container">
+  <div class="container" style="max-width: 420px;">
+    <div class="text-center mb-4 fade-in">
+      <h1 class="display-5 fw-bold" style="color: var(--primary-color);">MyGym</h1>
+      <p class="lead">Дневник тренировок в облаке</p>
+    </div>
+
+    <div class="card fade-in">
+      <div class="card-body p-4">
+        <div class="btn-group w-100 mb-4" role="group">
+          <button type="button" class="btn btn-outline-light active" id="tab-login">Вход</button>
+          <button type="button" class="btn btn-outline-light" id="tab-signup">Регистрация</button>
+        </div>
+
+        <div id="login-form">
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control form-control-lg" id="login-email" autocomplete="username">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Пароль</label>
+            <input type="password" class="form-control form-control-lg" id="login-password" autocomplete="current-password">
+          </div>
+          <button class="btn btn-primary w-100 btn-lg" id="login-submit">Войти</button>
+        </div>
+
+        <div id="signup-form" class="d-none">
+          <div class="mb-3">
+            <label class="form-label">Имя</label>
+            <input type="text" class="form-control form-control-lg" id="signup-name" placeholder="Как тебя зовут">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control form-control-lg" id="signup-email" autocomplete="username">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Пароль (мин. 6)</label>
+            <input type="password" class="form-control form-control-lg" id="signup-password" autocomplete="new-password">
+          </div>
+          <button class="btn btn-primary w-100 btn-lg" id="signup-submit">Создать аккаунт</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center text-muted mt-4">
+      <small>Версия <span id="login-version">2.0.0</span></small>
+    </div>
+  </div>
+</div>

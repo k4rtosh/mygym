@@ -1,0 +1,17 @@
+{
+  "name": "mygym-github",
+  "version": "1.0.0",
+  "description": "Офлайн-макет дневника тренировок с облачным аккаунтом, календарём и графиками.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.8",
+    "pg": "^8.22.0"
+  }
+}

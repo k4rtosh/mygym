@@ -1,0 +1,602 @@
+:root {
+    --primary-color: #e94560;
+    --secondary-color: #16213e;
+    --bg-color: #1a1a2e;
+    --card-bg: #16213e;
+    --text-color: #e0e0e0;
+    --text-muted: #999;
+    --border-radius: 12px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    min-height: 100vh;
+    padding-bottom: 70px;
+}
+
+/* Переопределение цветов Bootstrap для темной темы */
+body .text-muted {
+    color: var(--text-muted) !important;
+}
+
+body .text-light {
+    color: var(--text-color) !important;
+}
+
+body .text-white {
+    color: #ffffff !important;
+}
+
+body .text-primary {
+    color: var(--primary-color) !important;
+}
+
+/* Кастомные стили для приложения */
+.app-header {
+    background: linear-gradient(135deg, var(--secondary-color), var(--bg-color));
+    padding: 20px;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    color: #ffffff;
+}
+
+.app-header h4 {
+    color: #ffffff;
+}
+
+.app-header .text-muted {
+    color: #aaa !important;
+}
+
+.card {
+    background-color: var(--card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius);
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    color: var(--text-color);
+}
+
+.card-body {
+    color: var(--text-color);
+}
+
+.card-body p,
+.card-body span,
+.card-body div {
+    color: var(--text-color);
+}
+
+.card-body .text-muted {
+    color: var(--text-muted) !important;
+}
+
+.card-body h5,
+.card-body h6 {
+    color: #ffffff;
+}
+
+.card-header {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+}
+
+.card-header h6 {
+    color: #ffffff;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #ffffff;
+}
+
+.btn-primary:hover,
+.btn-primary:active,
+.btn-primary:focus {
+    background-color: #d63851;
+    border-color: #d63851;
+    color: #ffffff;
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #ffffff;
+}
+
+.btn-outline-light {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.btn-link.text-white {
+    color: #ffffff !important;
+    text-decoration: none;
+}
+
+/* Стили для страницы логина */
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: var(--text-color);
+}
+
+.login-container h1,
+.login-container p {
+    color: var(--text-color);
+}
+
+.login-container .lead {
+    color: #aaa;
+}
+
+.user-select-btn {
+    background-color: var(--card-bg);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius);
+    transition: all 0.3s;
+    color: var(--text-color);
+}
+
+.user-select-btn:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    color: #ffffff;
+}
+
+.user-select-btn.active {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #ffffff;
+}
+
+.user-avatar {
+    font-size: 3rem;
+    color: var(--text-color);
+}
+
+/* Стили для нижнего меню */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--secondary-color);
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+}
+
+.nav-item {
+    text-align: center;
+    color: #888;
+    text-decoration: none;
+    font-size: 0.8rem;
+    transition: color 0.3s;
+    cursor: pointer;
+}
+
+.nav-item i {
+    display: block;
+    font-size: 1.5rem;
+    margin-bottom: 4px;
+    color: #888;
+}
+
+.nav-item.active {
+    color: var(--primary-color);
+}
+
+.nav-item.active i {
+    color: var(--primary-color);
+}
+
+/* Стили для подходов */
+.set-row {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 8px;
+}
+
+.set-number {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+/* Таймер тренировки */
+.timer-display {
+    font-size: 2rem;
+    font-weight: bold;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    color: var(--primary-color);
+    font-family: monospace;
+}
+
+/* Анимации */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Кастомный input */
+input.form-control {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+input.form-control::placeholder {
+    color: #888;
+}
+
+input.form-control:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: var(--primary-color);
+    color: #ffffff;
+    box-shadow: 0 0 0 0.25rem rgba(233, 69, 96, 0.25);
+}
+
+input.form-control-sm {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+input.form-control-sm:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: var(--primary-color);
+    color: #ffffff;
+}
+
+/* Стили для label */
+.form-label {
+    color: var(--text-color);
+    margin-bottom: 4px;
+}
+
+/* Стили для статистики */
+.stat-card {
+    text-align: center;
+    padding: 20px;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.stat-label {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Кнопка "Начать тренировку" */
+.start-workout-btn {
+    width: 100%;
+    padding: 20px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: var(--border-radius);
+    background: linear-gradient(135deg, var(--primary-color), #d63851);
+    border: none;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.start-workout-btn:active {
+    transform: scale(0.98);
+}
+
+/* Alert стили */
+.alert {
+    border: none;
+}
+
+.alert-info {
+    background-color: rgba(13, 202, 240, 0.15);
+    color: #0dcaf0;
+}
+
+.alert-secondary {
+    background-color: rgba(108, 117, 125, 0.15);
+    color: #adb5bd;
+}
+
+/* Badge стили */
+.badge.bg-success {
+    background-color: #198754 !important;
+}
+
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000;
+}
+
+/* Модальное окно */
+.modal-content.bg-dark {
+    background-color: var(--bg-color) !important;
+}
+
+.modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-content.bg-dark .modal-title {
+    color: #ffffff;
+}
+
+/* Таблица */
+.table-dark {
+    --bs-table-bg: transparent;
+    --bs-table-color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.table-dark th {
+    color: var(--text-muted);
+    font-weight: normal;
+    font-size: 0.85rem;
+}
+
+.table-dark td {
+    color: var(--text-color);
+}
+
+/* Таблица с подходами */
+.sets-table {
+    width: 100%;
+}
+
+.sets-table input {
+    width: 100%;
+    min-width: 50px;
+}
+
+/* Чекбоксы выполненных подходов */
+.set-check {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+}
+
+/* Плавный скролл */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Цвет placeholder */
+::placeholder {
+    color: #666 !important;
+}
+
+/* Стили для кнопки-ссылки в header */
+.app-header .btn-link {
+    padding: 0;
+    font-size: 1.2rem;
+}
+
+/* Стили для маленьких подсказок */
+small {
+    color: var(--text-muted);
+}
+
+/* Стили для текста в кнопках с иконками */
+.btn i {
+    margin-right: 4px;
+}
+
+/* Исправление цвета в select и других элементах */
+select.form-control,
+select.form-select {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+select.form-control option,
+select.form-select option {
+    background-color: var(--bg-color);
+    color: #ffffff;
+}
+
+/* Стили для неактивных элементов */
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* Toast уведомления */
+#toast-container .alert {
+    margin-bottom: 8px;
+}
+
+/* Адаптивность для маленьких экранов */
+@media (max-width: 375px) {
+    .timer-display {
+        font-size: 1.5rem;
+    }
+    
+    .app-header h4 {
+        font-size: 1.2rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+}
+
+/* Стили для активной кнопки удаления */
+.btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    color: #ffffff;
+}
+
+.btn-outline-success {
+    color: #198754;
+    border-color: #198754;
+}
+
+.btn-outline-success:hover {
+    background-color: #198754;
+    color: #ffffff;
+}
+
+.btn-outline-warning {
+    color: #ffc107;
+    border-color: #ffc107;
+}
+
+.btn-outline-warning:hover {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.btn-outline-info {
+    color: #0dcaf0;
+    border-color: #0dcaf0;
+}
+
+.btn-outline-info:hover {
+    background-color: #0dcaf0;
+    color: #000;
+}
+
+/* Calendar */
+.cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin-bottom: 8px;
+}
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.cal-cell {
+    aspect-ratio: 1;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    background: var(--card-bg);
+    color: var(--text-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    cursor: pointer;
+}
+
+.cal-cell.cal-empty {
+    border: none;
+    background: transparent;
+    cursor: default;
+}
+
+.cal-day-num {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.cal-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-top: 4px;
+    background: transparent;
+}
+
+.cal-planned .cal-dot { background: #0dcaf0; }
+.cal-completed .cal-dot { background: #198754; }
+.cal-missed .cal-dot { background: #dc3545; }
+
+.cal-planned { border-color: rgba(13, 202, 240, 0.45); }
+.cal-completed { border-color: rgba(25, 135, 84, 0.55); }
+.cal-missed { border-color: rgba(220, 53, 69, 0.55); }
+
+.cal-today {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 1px;
+}
+
+.cal-legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.cal-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+.cal-swatch.cal-planned { background: #0dcaf0; }
+.cal-swatch.cal-completed { background: #198754; }
+.cal-swatch.cal-missed { background: #dc3545; }
+
+.rest-timer-bar {
+    background: var(--card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius);
+    padding: 12px 14px;
+}
+
+.bottom-nav .nav-item span {
+    font-size: 0.7rem;
+}

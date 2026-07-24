@@ -1,0 +1,41 @@
+<div class="app-header fade-in">
+    <h4 id="user-greeting">Привет!</h4>
+    <p class="text-muted mb-0">Готов к тренировке?</p>
+</div>
+
+<div class="container fade-in">
+    <div class="row mb-4">
+        <div class="col-4">
+            <div class="card stat-card">
+                <div class="stat-value" id="stat-today">0</div>
+                <div class="stat-label">Сегодня</div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="card stat-card">
+                <div class="stat-value" id="stat-week">0</div>
+                <div class="stat-label">За неделю</div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="card stat-card">
+                <div class="stat-value" id="stat-total">0</div>
+                <div class="stat-label">Всего</div>
+            </div>
+        </div>
+    </div>
+
+    <button class="start-workout-btn mb-4" id="start-workout-btn">
+        <i class="bi bi-lightning-charge"></i> Начать тренировку
+    </button>
+
+    <button class="btn btn-outline-light w-100 mb-4" onclick="Router.navigate('history')">
+        <i class="bi bi-clock-history"></i> История тренировок
+    </button>
+
+    <div id="last-workout-info" class="fade-in">
+        <div class="alert alert-secondary">
+            Нет завершённых тренировок
+        </div>
+    </div>
+</div>

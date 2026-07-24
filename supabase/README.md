@@ -1,0 +1,2 @@
+-- Optional: allow authenticated users to refresh catalog (not required for app)
+-- Prefer running seed_exercises.sql as project owner / service role in SQL Editor.
