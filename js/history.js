@@ -82,6 +82,8 @@ class HistoryManager {
     const exercisesHTML = (session.exercises || []).map((ex) => {
       const info = allExercises.find((e) => e.id === ex.exerciseId);
       const name = info ? info.name : 'Неизвестное';
+      const isBw = info && info.type === 'Собственный вес';
+      const weightCol = isBw ? 'Доп. вес' : 'Вес';
       const setsRows = (ex.sets || []).map((set, i) => `
         <tr><td>#${i + 1}</td><td>${set.weight || 0}</td><td>${set.reps || 0}</td></tr>
       `).join('');
@@ -94,7 +96,7 @@ class HistoryManager {
           <div class="card-body">
             ${setsRows ? `
               <table class="table table-dark table-sm">
-                <thead><tr><th>Подход</th><th>Вес</th><th>Повт.</th></tr></thead>
+                <thead><tr><th>Подход</th><th>${weightCol}</th><th>Повт.</th></tr></thead>
                 <tbody>${setsRows}</tbody>
               </table>
             ` : '<p class="text-muted mb-0">Нет подходов</p>'}

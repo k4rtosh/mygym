@@ -179,6 +179,8 @@ class ProgressManager {
 
     const exInfo = this.allExercises.find((e) => e.id === exerciseId);
     if (nameEl) nameEl.textContent = exInfo?.name || 'Упражнение';
+    const isBw = exInfo && exInfo.type === 'Собственный вес';
+    const weightLabel = isBw ? 'Доп. вес' : 'Вес';
 
     let points = [];
     try {
@@ -232,7 +234,7 @@ class ProgressManager {
           },
           {
             type: 'line',
-            label: 'Макс. вес (кг)',
+            label: `Макс. ${weightLabel.toLowerCase()} (кг)`,
             data: points.map((p) => p.maxWeight),
             borderColor: '#ff5a6a',
             backgroundColor: (ctx) => {
@@ -280,7 +282,7 @@ class ProgressManager {
             callbacks: {
               label(ctx) {
                 if (ctx.dataset.yAxisID === 'y1') return ` Объём: ${Math.round(ctx.parsed.y)}`;
-                return ` Вес: ${ctx.parsed.y} кг`;
+                return ` ${weightLabel}: ${ctx.parsed.y} кг`;
               }
             }
           }
@@ -289,7 +291,7 @@ class ProgressManager {
           y: {
             type: 'linear',
             position: 'left',
-            title: { display: true, text: 'Вес, кг', color: '#9aa3b5' },
+            title: { display: true, text: `${weightLabel}, кг`, color: '#9aa3b5' },
             ticks: { color: '#9aa3b5' },
             grid: { color: 'rgba(255,255,255,0.06)' },
             beginAtZero: false

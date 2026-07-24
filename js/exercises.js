@@ -80,7 +80,7 @@ class ExercisesManager {
           <div class="modal-body">
             <p><strong>Категория:</strong> ${Utils.escapeHtml(exercise.category)}</p>
             <p><strong>Мышцы:</strong> ${Utils.escapeHtml(exercise.muscle)}</p>
-            <p><strong>Тип:</strong> ${Utils.escapeHtml(exercise.type)}</p>
+            <p><strong>Оборудование:</strong> ${Utils.escapeHtml(exercise.type)}</p>
             <p><strong>Описание:</strong> ${Utils.escapeHtml(exercise.description)}</p>
           </div>
         </div>

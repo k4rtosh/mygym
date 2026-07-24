@@ -297,6 +297,17 @@ class TemplatesManager {
 
     const already = new Set((template.exercises || []).map((e) => e.exerciseId));
     const categories = [...new Set(allExercises.map((e) => e.category).filter(Boolean))].sort();
+    const equipmentOrder = [
+      'Свободный вес',
+      'Блочный',
+      'Хаммер',
+      'Тренажёр',
+      'Собственный вес',
+      'Кардио'
+    ];
+    const equipmentTypes = equipmentOrder.filter((t) =>
+      allExercises.some((e) => e.type === t)
+    );
 
     const modal = document.createElement('div');
     modal.className = 'modal fade';
@@ -313,10 +324,18 @@ class TemplatesManager {
               <i class="bi bi-search"></i>
               <input type="text" class="form-control" id="exercise-search" placeholder="Поиск...">
             </div>
-            <div class="tpl-chip-row mb-3" id="picker-cats">
+            <div class="small text-muted mb-1">Мышцы</div>
+            <div class="tpl-chip-row mb-2" id="picker-cats">
               <button type="button" class="tpl-chip active" data-cat="">Все</button>
               ${categories.map((c) => `
                 <button type="button" class="tpl-chip" data-cat="${Utils.escapeHtml(c)}">${Utils.escapeHtml(c)}</button>
+              `).join('')}
+            </div>
+            <div class="small text-muted mb-1">Оборудование</div>
+            <div class="tpl-chip-row mb-3" id="picker-equip">
+              <button type="button" class="tpl-chip active" data-equip="">Все</button>
+              ${equipmentTypes.map((t) => `
+                <button type="button" class="tpl-chip" data-equip="${Utils.escapeHtml(t)}">${Utils.escapeHtml(t)}</button>
               `).join('')}
             </div>
             <div id="exercise-list" class="picker-list"></div>
@@ -335,6 +354,7 @@ class TemplatesManager {
 
     const selected = new Set();
     let activeCat = '';
+    let activeEquip = '';
     const listEl = modal.querySelector('#exercise-list');
     const countEl = modal.querySelector('#picker-selected-count');
     const addBtn = modal.querySelector('#picker-add-btn');
@@ -344,24 +364,31 @@ class TemplatesManager {
       const q = (searchInput.value || '').toLowerCase().trim();
       let list = allExercises;
       if (activeCat) list = list.filter((e) => e.category === activeCat);
+      if (activeEquip) list = list.filter((e) => e.type === activeEquip);
       if (q) {
         list = list.filter((e) =>
           e.name.toLowerCase().includes(q) ||
           (e.category || '').toLowerCase().includes(q) ||
-          (e.muscle || '').toLowerCase().includes(q)
+          (e.muscle || '').toLowerCase().includes(q) ||
+          (e.type || '').toLowerCase().includes(q)
         );
       }
 
       listEl.innerHTML = list.map((ex) => {
         const inTemplate = already.has(ex.id);
         const isSel = selected.has(ex.id);
+        const metaParts = [
+          ex.category || '',
+          ex.type || '',
+          ex.muscle ? ex.muscle.split(',')[0] : ''
+        ].filter(Boolean);
         return `
           <label class="picker-item ${inTemplate ? 'is-added' : ''} ${isSel ? 'is-selected' : ''}">
             <input type="checkbox" data-id="${Utils.escapeHtml(ex.id)}"
               ${inTemplate ? 'disabled' : ''} ${isSel ? 'checked' : ''}>
             <div class="flex-grow-1 min-w-0">
               <div class="picker-name">${Utils.escapeHtml(ex.name)}</div>
-              <div class="picker-meta">${Utils.escapeHtml(ex.category || '')}${ex.muscle ? ' · ' + Utils.escapeHtml(ex.muscle.split(',')[0]) : ''}</div>
+              <div class="picker-meta">${Utils.escapeHtml(metaParts.join(' · '))}</div>
             </div>
             ${inTemplate ? '<span class="badge bg-secondary">уже есть</span>' : ''}
           </label>
@@ -384,6 +411,16 @@ class TemplatesManager {
       if (!chip) return;
       activeCat = chip.dataset.cat || '';
       modal.querySelectorAll('#picker-cats .tpl-chip').forEach((c) => {
+        c.classList.toggle('active', c === chip);
+      });
+      renderList();
+    });
+
+    modal.querySelector('#picker-equip').addEventListener('click', (e) => {
+      const chip = e.target.closest('.tpl-chip');
+      if (!chip) return;
+      activeEquip = chip.dataset.equip || '';
+      modal.querySelectorAll('#picker-equip .tpl-chip').forEach((c) => {
         c.classList.toggle('active', c === chip);
       });
       renderList();

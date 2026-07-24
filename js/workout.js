@@ -275,6 +275,7 @@ class WorkoutManager {
       ? this.currentSession.exercises.map((ex, index) => {
         const info = allExercises.find((e) => e.id === ex.exerciseId);
         const name = info ? info.name : 'Неизвестное упражнение';
+        const isBw = info && info.type === 'Собственный вес';
         const timerValue = this.exerciseTimes[index] || ex.exerciseTime || 0;
         const running = !!this.exerciseTimers[index];
         return `
@@ -293,7 +294,8 @@ class WorkoutManager {
               </div>
             </div>
             <div class="card-body">
-              <div class="sets-list" id="sets-${index}">${this.renderSets(ex, index)}</div>
+              ${isBw ? '<div class="small text-muted mb-2">Доп. вес · 0 = без довеска</div>' : ''}
+              <div class="sets-list" id="sets-${index}">${this.renderSets(ex, index, { isBodyweight: isBw })}</div>
               <div class="mt-2 d-flex flex-wrap gap-2">
                 <button class="btn btn-sm btn-outline-light" onclick="WorkoutManager.addSet(${index})">
                   <i class="bi bi-plus"></i> Подход
@@ -361,17 +363,19 @@ class WorkoutManager {
     if (timerDisplay) timerDisplay.textContent = Utils.formatTime(this.elapsedSeconds);
   }
 
-  static renderSets(exercise, exerciseIndex) {
+  static renderSets(exercise, exerciseIndex, options = {}) {
     if (!exercise.sets || !exercise.sets.length) {
       return '<p class="text-muted small mb-0">Нет подходов</p>';
     }
+    const weightPh = options.isBodyweight ? 'доп. кг' : 'кг';
     return exercise.sets.map((set, setIndex) => `
       <div class="set-row">
         <div class="row align-items-center g-1">
           <div class="col-2"><span class="set-number">#${setIndex + 1}</span></div>
           <div class="col-4">
-            <input type="number" class="form-control form-control-sm" placeholder="кг"
+            <input type="number" class="form-control form-control-sm" placeholder="${weightPh}"
               value="${set.weight || ''}"
+              title="${options.isBodyweight ? 'Доп. вес (0 = без довеска)' : 'Вес, кг'}"
               onchange="WorkoutManager.updateSet(${exerciseIndex}, ${setIndex}, 'weight', this.value)">
           </div>
           <div class="col-4">
@@ -513,7 +517,7 @@ class WorkoutManager {
               ${allExercises.map((ex) => `
                 <button class="btn btn-outline-light w-100 mb-2 text-start exercise-select-btn" data-exercise-id="${Utils.escapeHtml(ex.id)}">
                   <strong>${Utils.escapeHtml(ex.name)}</strong><br>
-                  <small class="text-muted">${Utils.escapeHtml(ex.category)} · ${Utils.escapeHtml(ex.muscle)}</small>
+                  <small class="text-muted">${Utils.escapeHtml(ex.category)} · ${Utils.escapeHtml(ex.type || '')}</small>
                 </button>
               `).join('')}
             </div>
