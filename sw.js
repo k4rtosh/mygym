@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mygym-v1.0.1';
+const CACHE_NAME = 'mygym-v1.0.3';
 const urlsToCache = [
   '/mygym/',
   '/mygym/index.html',
@@ -28,13 +28,14 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Service Worker: кэширование файлов');
+        console.log('Service Worker: кэширование файлов', CACHE_NAME);
         return cache.addAll(urlsToCache);
       })
       .catch(err => {
         console.error('Service Worker: ошибка кэширования:', err);
       })
   );
+  // Принудительно активируем новый SW сразу
   self.skipWaiting();
 });
 
@@ -49,21 +50,18 @@ self.addEventListener('activate', event => {
           }
         })
       );
+    }).then(() => {
+      // Захватываем контроль над всеми вкладками
+      return self.clients.claim();
     })
   );
-  return self.clients.claim();
 });
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   
-  // Пропускаем запросы к расширениям браузера
+  // Пропускаем запросы не по HTTP(S)
   if (!url.protocol.startsWith('http')) {
-    return;
-  }
-  
-  // Пропускаем запросы к chrome-extension
-  if (url.protocol === 'chrome-extension:') {
     return;
   }
   
@@ -83,9 +81,9 @@ self.addEventListener('fetch', event => {
             }
             
             const responseToCache = response.clone();
-            
-            // Кэшируем только запросы к нашему домену или CDN
             const hostname = url.hostname;
+            
+            // Кэшируем только наши файлы и CDN
             if (hostname === 'k4rtosh.github.io' || 
                 hostname === 'cdn.jsdelivr.net' ||
                 hostname === 'fonts.googleapis.com' ||
@@ -94,15 +92,12 @@ self.addEventListener('fetch', event => {
                 .then(cache => {
                   cache.put(event.request, responseToCache);
                 })
-                .catch(err => {
-                  // Игнорируем ошибки кэширования
-                });
+                .catch(() => {});
             }
             
             return response;
           })
-          .catch(error => {
-            console.error('Fetch error:', error);
+          .catch(() => {
             if (url.pathname.includes('html')) {
               return caches.match('/mygym/pages/home.html');
             }

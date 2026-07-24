@@ -9,12 +9,10 @@ class Database {
     }
     
     async init() {
-        // Если уже инициализируется, возвращаем существующий промис
         if (this.initPromise) {
             return this.initPromise;
         }
         
-        // Если уже инициализирована, возвращаем успех
         if (this.db) {
             return Promise.resolve();
         }
@@ -38,7 +36,7 @@ class Database {
                 };
                 
                 this.db.onversionchange = () => {
-                    console.warn('⚠️ Версия IndexedDB изменилась, закрываем...');
+                    console.warn('⚠️ Версия IndexedDB изменилась');
                     this.db.close();
                     this.db = null;
                 };
@@ -91,7 +89,6 @@ class Database {
         return this.db !== null;
     }
     
-    // Проверка и ожидание готовности базы
     async ensureReady() {
         if (this.isReady()) {
             return;
@@ -105,13 +102,11 @@ class Database {
     
     async get(storeName, key) {
         await this.ensureReady();
-        
         return new Promise((resolve, reject) => {
             try {
                 const transaction = this.db.transaction([storeName], 'readonly');
                 const store = transaction.objectStore(storeName);
                 const request = store.get(key);
-                
                 request.onsuccess = () => resolve(request.result);
                 request.onerror = () => reject(request.error);
             } catch (error) {
@@ -122,13 +117,11 @@ class Database {
     
     async put(storeName, data) {
         await this.ensureReady();
-        
         return new Promise((resolve, reject) => {
             try {
                 const transaction = this.db.transaction([storeName], 'readwrite');
                 const store = transaction.objectStore(storeName);
                 const request = store.put(data);
-                
                 request.onsuccess = () => resolve(request.result);
                 request.onerror = () => reject(request.error);
             } catch (error) {
@@ -139,13 +132,11 @@ class Database {
     
     async add(storeName, data) {
         await this.ensureReady();
-        
         return new Promise((resolve, reject) => {
             try {
                 const transaction = this.db.transaction([storeName], 'readwrite');
                 const store = transaction.objectStore(storeName);
                 const request = store.add(data);
-                
                 request.onsuccess = () => resolve(request.result);
                 request.onerror = () => reject(request.error);
             } catch (error) {
@@ -156,13 +147,11 @@ class Database {
     
     async getAll(storeName) {
         await this.ensureReady();
-        
         return new Promise((resolve, reject) => {
             try {
                 const transaction = this.db.transaction([storeName], 'readonly');
                 const store = transaction.objectStore(storeName);
                 const request = store.getAll();
-                
                 request.onsuccess = () => resolve(request.result);
                 request.onerror = () => reject(request.error);
             } catch (error) {
@@ -173,14 +162,12 @@ class Database {
     
     async getByIndex(storeName, indexName, value) {
         await this.ensureReady();
-        
         return new Promise((resolve, reject) => {
             try {
                 const transaction = this.db.transaction([storeName], 'readonly');
                 const store = transaction.objectStore(storeName);
                 const index = store.index(indexName);
                 const request = index.getAll(value);
-                
                 request.onsuccess = () => resolve(request.result);
                 request.onerror = () => reject(request.error);
             } catch (error) {
@@ -191,13 +178,11 @@ class Database {
     
     async delete(storeName, key) {
         await this.ensureReady();
-        
         return new Promise((resolve, reject) => {
             try {
                 const transaction = this.db.transaction([storeName], 'readwrite');
                 const store = transaction.objectStore(storeName);
                 const request = store.delete(key);
-                
                 request.onsuccess = () => resolve();
                 request.onerror = () => reject(request.error);
             } catch (error) {
@@ -208,13 +193,11 @@ class Database {
     
     async clear(storeName) {
         await this.ensureReady();
-        
         return new Promise((resolve, reject) => {
             try {
                 const transaction = this.db.transaction([storeName], 'readwrite');
                 const store = transaction.objectStore(storeName);
                 const request = store.clear();
-                
                 request.onsuccess = () => resolve();
                 request.onerror = () => reject(request.error);
             } catch (error) {
@@ -225,7 +208,6 @@ class Database {
     
     async seedExercises(exercises) {
         await this.ensureReady();
-        
         const existingExercises = await this.getAll('exercises');
         if (existingExercises.length === 0) {
             for (const exercise of exercises) {
@@ -239,7 +221,6 @@ class Database {
     
     async seedUsers(users) {
         await this.ensureReady();
-        
         const existingUsers = await this.getAll('users');
         if (existingUsers.length === 0) {
             for (const user of users) {
@@ -253,7 +234,6 @@ class Database {
 
     async updateExercises(newExercises) {
         await this.ensureReady();
-        
         const currentVersion = await this.get('settings', 'exercisesVersion');
         const newVersion = JSON.stringify(newExercises);
         
