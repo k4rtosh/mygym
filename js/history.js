@@ -228,4 +228,4 @@ class HistoryManager {
     }
 }
 
-window.History = History;
+window.HistoryManager = HistoryManager;

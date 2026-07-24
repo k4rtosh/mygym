@@ -5,6 +5,8 @@ class WorkoutManager {
     static timerInterval = null;
     static startTime = null;
     static elapsedSeconds = 0;
+    static exerciseTimers = {};
+    static exerciseTimes = {};
     
     static async loadStartWorkout() {
         const user = Auth.getCurrentUser();
@@ -166,7 +168,6 @@ class WorkoutManager {
             return;
         }
         
-        // Проверяем, не завершена ли уже тренировка
         if (this.currentSession.endTime) {
             await DB.delete('settings', 'activeSession');
             Router.navigate('history-detail', {sessionId: sessionId});
@@ -175,6 +176,10 @@ class WorkoutManager {
         
         this.startTime = new Date(this.currentSession.startTime);
         this.startTimer();
+        
+        // 🆕 Восстанавливаем таймеры упражнений
+        this.restoreExerciseTimers();
+        
         await this.renderActiveWorkout();
     }
     
@@ -213,35 +218,45 @@ class WorkoutManager {
                 const exerciseName = exerciseInfo ? exerciseInfo.name : 'Неизвестное упражнение';
                 
                 return `
-                    <div class="card mb-3 ${ex.completed ? 'border-success' : ''}">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0">${exerciseName}</h6>
-                            ${ex.completed ? '<span class="badge bg-success">Выполнено</span>' : ''}
-                        </div>
-                        <div class="card-body">
-                            <div class="sets-list" id="sets-${index}">
-                                ${this.renderSets(ex, index)}
-                            </div>
-                            <div class="mt-2">
-                                <button class="btn btn-sm btn-outline-light" 
-                                        onclick="WorkoutManager.addSet(${index})">
-                                    <i class="bi bi-plus"></i> Добавить подход
-                                </button>
-                                ${!ex.completed ? `
-                                    <button class="btn btn-sm btn-outline-success ms-2" 
-                                            onclick="WorkoutManager.completeExercise(${index})">
-                                        <i class="bi bi-check-lg"></i> Завершить
-                                    </button>
-                                ` : `
-                                    <button class="btn btn-sm btn-outline-warning ms-2" 
-                                            onclick="WorkoutManager.uncompleteExercise(${index})">
-                                        <i class="bi bi-arrow-counterclockwise"></i> Вернуть
-                                    </button>
-                                `}
-                            </div>
+                <div class="card mb-3 ${ex.completed ? 'border-success' : ''}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">${exerciseName}</h6>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-info" id="exercise-timer-${index}">
+                                ${Utils.formatTime(this.exerciseTimes[index] || ex.exerciseTime || 0)}
+                            </span>
+                            <button class="btn btn-sm btn-outline-primary" 
+                                    id="timer-btn-${index}"
+                                    onclick="WorkoutManager.toggleExerciseTimer(${index})">
+                                ▶ Старт
+                            </button>
+                            ${ex.completed ? '<span class="badge bg-success">✅</span>' : ''}
                         </div>
                     </div>
-                `;
+                    <div class="card-body">
+                        <div class="sets-list" id="sets-${index}">
+                            ${this.renderSets(ex, index)}
+                        </div>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-light" 
+                                    onclick="WorkoutManager.addSet(${index})">
+                                <i class="bi bi-plus"></i> Добавить подход
+                            </button>
+                            ${!ex.completed ? `
+                                <button class="btn btn-sm btn-outline-success ms-2" 
+                                        onclick="WorkoutManager.completeExercise(${index})">
+                                    <i class="bi bi-check-lg"></i> Завершить
+                                </button>
+                            ` : `
+                                <button class="btn btn-sm btn-outline-warning ms-2" 
+                                        onclick="WorkoutManager.uncompleteExercise(${index})">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Вернуть
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
             }).join('');
         } else {
             exercisesHTML = `
@@ -450,6 +465,80 @@ class WorkoutManager {
     
     static async saveCurrentSession() {
         await DB.put('sessions', this.currentSession);
+    }
+
+    // Запуск таймера упражнения
+    static startExerciseTimer(exerciseIndex) {
+        if (this.exerciseTimers[exerciseIndex]) {
+            clearInterval(this.exerciseTimers[exerciseIndex]);
+        }
+        
+        if (!this.exerciseTimes[exerciseIndex]) {
+            this.exerciseTimes[exerciseIndex] = 0;
+        }
+        
+        this.exerciseTimers[exerciseIndex] = setInterval(() => {
+            this.exerciseTimes[exerciseIndex]++;
+            
+            const timerDisplay = document.getElementById(`exercise-timer-${exerciseIndex}`);
+            if (timerDisplay) {
+                timerDisplay.textContent = Utils.formatTime(this.exerciseTimes[exerciseIndex]);
+            }
+            
+            // Сохраняем в сессию
+            if (this.currentSession && this.currentSession.exercises[exerciseIndex]) {
+                this.currentSession.exercises[exerciseIndex].exerciseTime = this.exerciseTimes[exerciseIndex];
+                this.saveCurrentSession();
+            }
+        }, 1000);
+        
+        this.updateExerciseTimerButton(exerciseIndex, true);
+    }
+
+    // Остановка таймера упражнения
+    static stopExerciseTimer(exerciseIndex) {
+        if (this.exerciseTimers[exerciseIndex]) {
+            clearInterval(this.exerciseTimers[exerciseIndex]);
+            this.exerciseTimers[exerciseIndex] = null;
+            
+            if (this.currentSession && this.currentSession.exercises[exerciseIndex]) {
+                this.currentSession.exercises[exerciseIndex].exerciseTime = this.exerciseTimes[exerciseIndex];
+                this.saveCurrentSession();
+            }
+            
+            this.updateExerciseTimerButton(exerciseIndex, false);
+        }
+    }
+
+    // Переключение таймера
+    static toggleExerciseTimer(exerciseIndex) {
+        if (this.exerciseTimers[exerciseIndex]) {
+            this.stopExerciseTimer(exerciseIndex);
+        } else {
+            this.startExerciseTimer(exerciseIndex);
+        }
+    }
+
+    // Обновление кнопки
+    static updateExerciseTimerButton(exerciseIndex, isRunning) {
+        const button = document.getElementById(`timer-btn-${exerciseIndex}`);
+        if (button) {
+            button.textContent = isRunning ? '⏹ Стоп' : '▶ Старт';
+            button.className = `btn btn-sm ${isRunning ? 'btn-danger' : 'btn-outline-primary'}`;
+        }
+    }
+
+    // Восстановление таймеров при загрузке
+    static restoreExerciseTimers() {
+        if (!this.currentSession || !this.currentSession.exercises) return;
+        
+        this.currentSession.exercises.forEach((ex, index) => {
+            if (ex.exerciseTime) {
+                this.exerciseTimes[index] = ex.exerciseTime;
+            } else {
+                this.exerciseTimes[index] = 0;
+            }
+        });
     }
     
     static async saveAndRender() {
