@@ -511,27 +511,20 @@ class WorkoutManager {
     }
     
     static async finishWorkout() {
-        // Проверяем, есть ли незавершённые упражнения
-        const incompleteExercises = this.currentSession.exercises.filter(ex => !ex.completed);
-        
-        if (incompleteExercises.length > 0) {
-            const confirmed = await Utils.confirm(
-                `Есть ${incompleteExercises.length} незавершённых упражнений.\n` +
-                'Всё равно завершить тренировку?'
-            );
-            if (!confirmed) return;
-        }
-        
+        // Останавливаем общий таймер
         this.stopTimer();
         
-        // Останавливаем все таймеры упражнений
+        // Останавливаем все таймеры упражнений и завершаем все упражнения
         if (this.currentSession && this.currentSession.exercises) {
             this.currentSession.exercises.forEach((ex, index) => {
+                // Останавливаем таймер если он запущен
                 if (this.exerciseTimers[index]) {
                     this.stopExerciseTimer(index);
                 }
                 // Сохраняем финальное время
                 ex.exerciseTime = this.exerciseTimes[index] || ex.exerciseTime || 0;
+                // Автоматически завершаем упражнение
+                ex.completed = true;
             });
         }
         
@@ -551,7 +544,6 @@ class WorkoutManager {
         this.elapsedSeconds = 0;
         this.exerciseTimers = {};
         this.exerciseTimes = {};
-        this.exerciseTimerRunning = {};
         
         Router.navigate('history');
     }

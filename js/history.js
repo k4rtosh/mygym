@@ -24,6 +24,12 @@ class HistoryManager {
                 const duration = session.duration ? Utils.formatTime(session.duration) : 'Не завершена';
                 const completed = session.endTime ? true : false;
                 
+                // Подсчитываем общее время упражнений
+                let totalExerciseTime = 0;
+                if (session.exercises && session.exercises.length > 0) {
+                    totalExerciseTime = session.exercises.reduce((sum, ex) => sum + (ex.exerciseTime || 0), 0);
+                }
+                
                 return `
                     <div class="card mb-3" onclick="Router.navigate('history-detail', {sessionId: '${session.id}'})">
                         <div class="card-body">
@@ -37,6 +43,7 @@ class HistoryManager {
                                     <br>
                                     <small class="text-muted">
                                         ${session.exercises.length} упражнений &middot; ${duration}
+                                        ${totalExerciseTime > 0 ? ` &middot; ⏱ ${Utils.formatTime(totalExerciseTime)}` : ''}
                                     </small>
                                 </div>
                                 <div class="text-end">
@@ -97,12 +104,19 @@ class HistoryManager {
         
         const duration = session.duration ? Utils.formatTime(session.duration) : 'Не завершена';
         
+        // Подсчитываем общее время упражнений
+        let totalExerciseTime = 0;
+        if (session.exercises && session.exercises.length > 0) {
+            totalExerciseTime = session.exercises.reduce((sum, ex) => sum + (ex.exerciseTime || 0), 0);
+        }
+        
         let exercisesHTML = '';
         
         if (session.exercises && session.exercises.length > 0) {
             exercisesHTML = session.exercises.map(ex => {
                 const exerciseInfo = allExercises.find(e => e.id === ex.exerciseId);
                 const exerciseName = exerciseInfo ? exerciseInfo.name : 'Неизвестное упражнение';
+                const exerciseTime = ex.exerciseTime || 0;
                 
                 let setsHTML = '';
                 
@@ -141,7 +155,10 @@ class HistoryManager {
                     <div class="card mb-3 ${ex.completed ? 'border-success' : ''}">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h6 class="mb-0">${exerciseName}</h6>
-                            ${ex.completed ? '<span class="badge bg-success">✅</span>' : ''}
+                            <div>
+                                ${exerciseTime > 0 ? `<span class="badge bg-info me-2">⏱ ${Utils.formatTime(exerciseTime)}</span>` : ''}
+                                ${ex.completed ? '<span class="badge bg-success">✅</span>' : '<span class="badge bg-warning">⏳</span>'}
+                            </div>
                         </div>
                         <div class="card-body">
                             ${setsHTML}
@@ -167,6 +184,7 @@ class HistoryManager {
                         <h4 class="mb-0">${session.templateName || 'Тренировка'}</h4>
                         <small class="text-muted">
                             ${Utils.formatDate(session.date)} &middot; ${Utils.getDayOfWeek(session.date)}
+                            ${totalExerciseTime > 0 ? ` &middot; ⏱ ${Utils.formatTime(totalExerciseTime)}` : ''}
                         </small>
                     </div>
                 </div>
@@ -176,13 +194,17 @@ class HistoryManager {
                 <div class="card mb-3">
                     <div class="card-body">
                         <div class="row text-center">
-                            <div class="col-6">
+                            <div class="col-4">
                                 <small class="text-muted">Начало</small><br>
                                 ${Utils.formatDateTime(session.startTime)}
                             </div>
-                            <div class="col-6">
+                            <div class="col-4">
                                 <small class="text-muted">Длительность</small><br>
                                 ${duration}
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">Время упражнений</small><br>
+                                ${totalExerciseTime > 0 ? Utils.formatTime(totalExerciseTime) : '0:00'}
                             </div>
                         </div>
                     </div>
