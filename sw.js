@@ -20,7 +20,8 @@ const urlsToCache = [
   '/mygym/pages/template-edit.html',
   '/mygym/pages/workout.html',
   '/mygym/pages/history.html',
-  '/mygym/pages/exercises.html'
+  '/mygym/pages/exercises.html',
+  '/mygym/pages/profile.html'
 ];
 
 self.addEventListener('install', event => {
@@ -54,8 +55,9 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Пропускаем запросы к расширениям браузера и другим не-http(s) запросам
   const url = new URL(event.request.url);
+  
+  // Пропускаем запросы к расширениям браузера
   if (!url.protocol.startsWith('http')) {
     return;
   }
@@ -72,21 +74,22 @@ self.addEventListener('fetch', event => {
           return response;
         }
         
-        // Клонируем запрос, так как его можно использовать только один раз
         const fetchRequest = event.request.clone();
         
         return fetch(fetchRequest)
           .then(response => {
-            // Проверяем, что ответ валидный
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
             
-            // Клонируем ответ, так как его можно использовать только один раз
             const responseToCache = response.clone();
             
-            // Кэшируем только если это наш сайт
-            if (url.hostname === window.location.hostname || url.hostname === 'cdn.jsdelivr.net') {
+            // Кэшируем только запросы к нашему домену или CDN
+            const hostname = url.hostname;
+            if (hostname === 'k4rtosh.github.io' || 
+                hostname === 'cdn.jsdelivr.net' ||
+                hostname === 'fonts.googleapis.com' ||
+                hostname === 'fonts.gstatic.com') {
               caches.open(CACHE_NAME)
                 .then(cache => {
                   cache.put(event.request, responseToCache);
@@ -100,7 +103,6 @@ self.addEventListener('fetch', event => {
           })
           .catch(error => {
             console.error('Fetch error:', error);
-            // Возвращаем fallback страницу
             if (url.pathname.includes('html')) {
               return caches.match('/mygym/pages/home.html');
             }

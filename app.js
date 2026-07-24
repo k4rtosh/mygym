@@ -2,7 +2,31 @@
 const APP_VERSION = '1.0.1';
 const APP_VERSION_KEY = 'appVersion';
 
-// ===== ОБЪЯВЛЯЕМ ФУНКЦИИ СНАЧАЛА =====
+// ===== ОБЪЯВЛЯЕМ ВСЕ ФУНКЦИИ ПЕРЕД ИСПОЛЬЗОВАНИЕМ =====
+
+// Очистка кэша и перезагрузка
+async function clearCacheAndReload() {
+    try {
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let registration of registrations) {
+                await registration.unregister();
+            }
+        }
+        
+        if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            for (const cacheName of cacheNames) {
+                await caches.delete(cacheName);
+            }
+        }
+        
+        location.reload(true);
+    } catch (e) {
+        console.error('Ошибка очистки кэша:', e);
+        location.reload(true);
+    }
+}
 
 // Функция для обновления приложения
 async function updateApp() {
@@ -36,11 +60,9 @@ async function updateApp() {
             }
         }
         
-        // 4. Показываем сообщение
         Utils.showToast(`✅ Приложение обновлено до версии ${APP_VERSION}!`, 'success');
         
-        // 5. Предлагаем перезагрузить страницу
-        const reload = await Utils.confirm('Для полного обновления нужно перезагрузить страницу. Сделать это сейчас?');
+        const reload = await Utils.confirm('Перезагрузить страницу?');
         if (reload) {
             location.reload(true);
         }
@@ -69,43 +91,18 @@ function importData() {
     input.click();
 }
 
-// Очистка кэша и перезагрузка
-async function clearCacheAndReload() {
-    try {
-        if ('serviceWorker' in navigator) {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (let registration of registrations) {
-                await registration.unregister();
-            }
-        }
-        
-        if ('caches' in window) {
-            const cacheNames = await caches.keys();
-            for (const cacheName of cacheNames) {
-                await caches.delete(cacheName);
-            }
-        }
-        
-        location.reload(true);
-    } catch (e) {
-        console.error('Ошибка очистки кэша:', e);
-        location.reload(true);
-    }
-}
-
-// ===== ЭКСПОРТИРУЕМ ФУНКЦИИ ГЛОБАЛЬНО =====
+// ===== ЭКСПОРТИРУЕМ ФУНКЦИИ =====
 window.APP_VERSION = APP_VERSION;
 window.updateApp = updateApp;
 window.exportData = exportData;
 window.importData = importData;
 window.clearCacheAndReload = clearCacheAndReload;
 
-// ===== ОСНОВНАЯ ФУНКЦИЯ ИНИЦИАЛИЗАЦИИ =====
+// ===== ОСНОВНАЯ ИНИЦИАЛИЗАЦИЯ =====
 async function initApp() {
     try {
         console.log('🚀 Запуск приложения...');
         
-        // 1. ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ
         console.log('🔄 Инициализация IndexedDB...');
         await DB.init();
         
@@ -114,7 +111,6 @@ async function initApp() {
         }
         console.log('✅ IndexedDB готова');
         
-        // 2. ПРОВЕРКА ВЕРСИИ
         console.log('🔄 Проверка версии приложения...');
         const savedVersion = await DB.get('settings', APP_VERSION_KEY);
         
@@ -153,7 +149,6 @@ async function initApp() {
             Utils.showToast(`Приложение обновлено до версии ${APP_VERSION}! 🎉`);
         }
         
-        // 3. ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ
         console.log('🔄 Загрузка пользователей...');
         try {
             const usersResponse = await fetch('data/users.json');
@@ -166,7 +161,6 @@ async function initApp() {
             console.log('Пользователи уже загружены или файл недоступен');
         }
         
-        // 4. ПРОВЕРКА АКТИВНОЙ ТРЕНИРОВКИ
         console.log('🔄 Проверка активной тренировки...');
         try {
             const activeSession = await DB.get('settings', 'activeSession');
@@ -188,12 +182,11 @@ async function initApp() {
             console.warn('⚠️ Ошибка проверки активной тренировки:', e);
         }
         
-        // 5. АВТОРИЗАЦИЯ
         console.log('🔄 Проверка авторизации...');
         const isLoggedIn = await Auth.init();
         
         if (isLoggedIn) {
-            console.log('✅ Авторизация успешна, переход на главную');
+            console.log('✅ Авторизация успешна');
             await Router.navigate('home');
         } else {
             console.log('🔑 Требуется авторизация');
