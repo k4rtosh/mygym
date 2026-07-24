@@ -15,6 +15,9 @@
             </div>
             <h5 id="profile-name"></h5>
             <p class="text-muted">Участник с <span id="profile-join-date"></span></p>
+            <div class="mt-2">
+                <span class="badge bg-info">Версия <span id="app-version-display">1.0.0</span></span>
+            </div>
         </div>
     </div>
     
@@ -29,8 +32,11 @@
             <button class="btn btn-outline-light w-100 mb-2" id="import-data-btn">
                 <i class="bi bi-upload"></i> Импорт данных (JSON)
             </button>
-            <button class="btn btn-outline-warning w-100" id="reset-exercises-btn">
+            <button class="btn btn-outline-warning w-100 mb-2" id="reset-exercises-btn">
                 <i class="bi bi-arrow-clockwise"></i> Обновить базу упражнений
+            </button>
+            <button class="btn btn-outline-primary w-100" id="update-app-btn">
+                <i class="bi bi-cloud-download"></i> Обновить приложение (v<span id="update-version-display">1.0.0</span>)
             </button>
         </div>
     </div>
@@ -40,6 +46,6 @@
     </button>
     
     <div class="text-center mt-4">
-        <small class="text-muted">MyGym v1.0.0</small>
+        <small class="text-muted">MyGym v<span id="footer-version-display">1.0.0</span></small>
     </div>
 </div>

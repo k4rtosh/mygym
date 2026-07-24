@@ -1,7 +1,48 @@
-// Инициализация приложения
+// Версия приложения
+const APP_VERSION = '1.0.1';
+const APP_VERSION_KEY = 'appVersion';
 
+// Инициализация приложения
 async function initApp() {
     try {
+        // Проверяем версию приложения
+        const savedVersion = await DB.get('settings', APP_VERSION_KEY);
+        
+        if (!savedVersion || savedVersion.value !== APP_VERSION) {
+            console.log('🔄 Обнаружена новая версия приложения!');
+            
+            // Если версия изменилась - обновляем упражнения
+            try {
+                const exercisesResponse = await fetch('data/exercises.json');
+                const exercisesData = await exercisesResponse.json();
+                await DB.updateExercises(exercisesData.exercises);
+                console.log('✅ Упражнения обновлены для новой версии');
+            } catch (e) {
+                console.log('⚠️ Ошибка обновления упражнений:', e);
+            }
+            
+            // Сохраняем новую версию
+            await DB.put('settings', {
+                key: APP_VERSION_KEY,
+                value: APP_VERSION
+            });
+            
+            // Обновляем Service Worker
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (let registration of registrations) {
+                        await registration.update();
+                    }
+                    console.log('✅ Service Worker обновлён');
+                } catch (e) {
+                    console.log('⚠️ Ошибка обновления Service Worker:', e);
+                }
+            }
+            
+            Utils.showToast(`Приложение обновлено до версии ${APP_VERSION}! 🎉`);
+        }
+        
         // Инициализируем базу данных
         await DB.init();
         
@@ -12,17 +53,6 @@ async function initApp() {
             await DB.seedUsers(usersData.users);
         } catch (e) {
             console.log('Пользователи уже загружены или файл недоступен');
-        }
-        
-        try {
-            const exercisesResponse = await fetch('data/exercises.json');
-            const exercisesData = await exercisesResponse.json();
-            const updated = await DB.updateExercises(exercisesData.exercises);
-            if (updated) {
-                console.log('База упражнений обновлена');
-            }
-        } catch (e) {
-            console.log('Ошибка загрузки упражнений:', e);
         }
         
         // Проверяем активную сессию тренировки
@@ -65,16 +95,50 @@ async function initApp() {
     }
 }
 
-// Обработка кнопки "Назад" в браузере
-window.addEventListener('popstate', (event) => {
-    if (event.state && event.state.page) {
-        Router.navigate(event.state.page, event.state.params);
+// Глобальная функция для полного обновления приложения
+async function updateApp() {
+    const confirmed = await Utils.confirm(
+        'Обновить приложение?\n\n' +
+        'Будут загружены последние упражнения и очищен кэш.\n' +
+        'Ваши тренировки и шаблоны сохранятся.'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+        Utils.showToast('🔄 Обновление приложения...', 'info');
+        
+        // 1. Обновляем упражнения
+        const exercisesResponse = await fetch('data/exercises.json');
+        const exercisesData = await exercisesResponse.json();
+        await DB.updateExercises(exercisesData.exercises);
+        
+        // 2. Сохраняем новую версию
+        await DB.put('settings', {
+            key: APP_VERSION_KEY,
+            value: APP_VERSION
+        });
+        
+        // 3. Обновляем Service Worker
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let registration of registrations) {
+                await registration.update();
+            }
+        }
+        
+        // 4. Показываем сообщение
+        Utils.showToast(`✅ Приложение обновлено до версии ${APP_VERSION}!`, 'success');
+        
+        // 5. Предлагаем перезагрузить страницу
+        const reload = await Utils.confirm('Для полного обновления нужно перезагрузить страницу. Сделать это сейчас?');
+        if (reload) {
+            location.reload(true);
+        }
+    } catch (error) {
+        console.error('Ошибка обновления:', error);
+        Utils.showToast('❌ Ошибка обновления: ' + error.message, 'danger');
     }
-});
-
-// Глобальная функция для экспорта данных
-async function exportData() {
-    await Sync.exportData();
 }
 
 // Глобальная функция для экспорта данных
@@ -95,6 +159,12 @@ function importData() {
     };
     input.click();
 }
+
+// Делаем функции глобальными
+window.APP_VERSION = APP_VERSION;
+window.updateApp = updateApp;
+window.exportData = exportData;
+window.importData = importData;
 
 // Запускаем приложение
 document.addEventListener('DOMContentLoaded', initApp);

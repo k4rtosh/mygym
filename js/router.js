@@ -320,6 +320,24 @@ class AppRouter {
         if (profileName) profileName.textContent = user.name;
         if (profileJoinDate) profileJoinDate.textContent = Utils.formatDate(user.joinDate);
         
+        // Отображаем версию приложения
+        const versionElements = document.querySelectorAll('#app-version-display, #update-version-display, #footer-version-display');
+        versionElements.forEach(el => {
+            if (el) el.textContent = window.APP_VERSION || '1.0.0';
+        });
+        
+        // Кнопка обновления приложения
+        const updateAppBtn = document.getElementById('update-app-btn');
+        if (updateAppBtn) {
+            updateAppBtn.addEventListener('click', () => {
+                if (window.updateApp) {
+                    window.updateApp();
+                } else {
+                    Utils.showToast('Функция обновления временно недоступна', 'warning');
+                }
+            });
+        }
+
         // Экспорт данных
         const exportBtn = document.getElementById('export-data-btn');
         if (exportBtn) {

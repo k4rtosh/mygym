@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mygym-v1';
+const CACHE_NAME = 'mygym-v1.0.1';  // Обнови версию
 const urlsToCache = [
   '/mygym/',
   '/mygym/index.html',
