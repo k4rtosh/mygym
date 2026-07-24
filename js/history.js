@@ -141,7 +141,7 @@ class HistoryManager {
                     <div class="card mb-3 ${ex.completed ? 'border-success' : ''}">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h6 class="mb-0">${exerciseName}</h6>
-                            ${ex.completed ? '<span class="badge bg-success">&#10003;</span>' : ''}
+                            ${ex.completed ? '<span class="badge bg-success">✅</span>' : ''}
                         </div>
                         <div class="card-body">
                             ${setsHTML}
@@ -192,7 +192,7 @@ class HistoryManager {
                 
                 ${exercisesHTML}
                 
-                <button class="btn btn-outline-danger w-100 mt-3" onclick="History.deleteSession('${session.id}')">
+                <button class="btn btn-outline-danger w-100 mt-3" onclick="HistoryManager.deleteSession('${session.id}')">
                     <i class="bi bi-trash"></i> Удалить тренировку
                 </button>
             </div>
