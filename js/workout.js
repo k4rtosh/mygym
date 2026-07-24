@@ -9,10 +9,69 @@ class WorkoutManager {
   static restInterval = null;
   static restSecondsLeft = 0;
 
+  static async guardActiveWorkout() {
+    const draft = await DB.loadActiveSession();
+    if (!draft || !draft.id || draft.endTime) return 'ok';
+
+    const resume = await Utils.confirm(
+      `Есть незавершённая тренировка «${draft.templateName || 'Тренировка'}».\n\n` +
+      `ОК — вернуться к ней\nОтмена — другое действие`
+    );
+    if (resume) {
+      Router.navigate('active-workout', { sessionId: draft.id });
+      return 'resumed';
+    }
+
+    const discard = await Utils.confirm(
+      'Отменить незавершённую тренировку и начать новую?\nЧерновик будет удалён.'
+    );
+    if (!discard) return 'abort';
+
+    await DB.clearActiveSession();
+    try {
+      await Api.deleteSession(draft.id);
+    } catch (e) {
+      console.warn('discard session', e);
+    }
+    return 'ok';
+  }
+
   static async loadStartWorkout() {
     const draft = await DB.loadActiveSession();
     if (draft && draft.id && !draft.endTime) {
-      Router.navigate('active-workout', { sessionId: draft.id });
+      const container = document.getElementById('app');
+      container.innerHTML = `
+        <div class="app-header fade-in">
+          <div class="d-flex align-items-center">
+            <button class="btn btn-link text-white me-2" onclick="Router.navigate('home')">
+              <i class="bi bi-arrow-left"></i>
+            </button>
+            <h4 class="mb-0">Тренировка</h4>
+          </div>
+        </div>
+        <div class="container fade-in">
+          <div class="card active-resume-card mb-3">
+            <div class="card-body">
+              <div class="home-last-label">Незавершённая</div>
+              <div class="home-last-title mb-2">${Utils.escapeHtml(draft.templateName || 'Тренировка')}</div>
+              <p class="text-muted small mb-3">Сначала заверши или отмени текущую, затем начинай новую.</p>
+              <button class="btn btn-primary w-100 mb-2" onclick="Router.navigate('active-workout', {sessionId: '${draft.id}'})">
+                <i class="bi bi-play-fill"></i> Продолжить
+              </button>
+              <button class="btn btn-outline-danger w-100" id="discard-draft-btn">
+                <i class="bi bi-x-circle"></i> Отменить черновик
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('discard-draft-btn')?.addEventListener('click', async () => {
+        if (!(await Utils.confirm('Удалить незавершённую тренировку?'))) return;
+        await DB.clearActiveSession();
+        try { await Api.deleteSession(draft.id); } catch (_) {}
+        Utils.showToast('Черновик удалён');
+        await WorkoutManager.loadStartWorkout();
+      });
       return;
     }
 
@@ -76,20 +135,25 @@ class WorkoutManager {
           </div>
         </div>
       </div>
-      ${Utils.bottomNav('home')}
     `;
   }
 
   static async startFromPlan() {
+    const gate = await this.guardActiveWorkout();
+    if (gate !== 'ok') return;
     const planned = await Api.getPlannedForDate(Utils.getTodayStr());
     if (planned?.template_id) {
-      await this.startFromTemplate(planned.template_id);
+      await this.startFromTemplate(planned.template_id, true);
     } else {
-      await this.startEmpty();
+      await this.startEmpty(true);
     }
   }
 
-  static async startFromTemplate(templateId) {
+  static async startFromTemplate(templateId, skipGuard = false) {
+    if (!skipGuard) {
+      const gate = await this.guardActiveWorkout();
+      if (gate !== 'ok') return;
+    }
     try {
       const template = await Api.getTemplate(templateId);
       if (!template) {
@@ -127,7 +191,11 @@ class WorkoutManager {
     }
   }
 
-  static async startEmpty() {
+  static async startEmpty(skipGuard = false) {
+    if (!skipGuard) {
+      const gate = await this.guardActiveWorkout();
+      if (gate !== 'ok') return;
+    }
     const session = {
       id: Utils.generateId(),
       templateId: null,

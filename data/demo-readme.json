@@ -1,0 +1,8 @@
+{
+  "meta": {
+    "note": "Demo dataset is generated in-app via Profile → Заполнить тестовыми данными (DemoData.seed). This file documents expected shape.",
+    "templates": ["Тест · Жим / грудь", "Тест · Спина", "Тест · Ноги"],
+    "sessions": 13,
+    "spanDays": 42
+  }
+}

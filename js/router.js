@@ -146,6 +146,39 @@ class AppRouter {
     const greeting = document.getElementById('user-greeting');
     if (greeting) greeting.textContent = `Привет, ${user?.name || ''}!`;
 
+    const draft = await DB.loadActiveSession();
+    const banner = document.getElementById('active-workout-banner');
+    const startBtn = document.getElementById('start-workout-btn');
+
+    if (banner) {
+      if (draft && draft.id && !draft.endTime) {
+        banner.innerHTML = `
+          <div class="card active-resume-card mb-3">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <div>
+                  <div class="home-last-label">Тренировка в процессе</div>
+                  <div class="home-last-title">${Utils.escapeHtml(draft.templateName || 'Тренировка')}</div>
+                </div>
+                <span class="badge bg-warning">Активна</span>
+              </div>
+              <button class="btn btn-primary w-100 mt-3" id="resume-workout-btn">
+                <i class="bi bi-play-fill"></i> Продолжить тренировку
+              </button>
+            </div>
+          </div>
+        `;
+        document.getElementById('resume-workout-btn')?.addEventListener('click', () => {
+          Router.navigate('active-workout', { sessionId: draft.id });
+        });
+        if (startBtn) {
+          startBtn.innerHTML = '<i class="bi bi-exclamation-circle"></i> Есть активная · начать новую?';
+        }
+      } else {
+        banner.innerHTML = '';
+      }
+    }
+
     try {
       const sessions = await Api.listSessions();
       const today = Utils.getTodayStr();
@@ -194,7 +227,9 @@ class AppRouter {
       Utils.showToast(e.message || 'Нет сети', 'warning');
     }
 
-    document.getElementById('start-workout-btn')?.addEventListener('click', () => {
+    startBtn?.addEventListener('click', async () => {
+      const gate = await WorkoutManager.guardActiveWorkout();
+      if (gate === 'resumed' || gate === 'abort') return;
       Router.navigate('workout');
     });
   }
@@ -244,6 +279,34 @@ class AppRouter {
 
     document.getElementById('update-app-btn')?.addEventListener('click', () => {
       if (window.clearCacheAndReload) window.clearCacheAndReload();
+    });
+
+    document.getElementById('seed-demo-btn')?.addEventListener('click', async () => {
+      if (!(await Utils.confirm(
+        'Заполнить тестовыми данными?\n\nТекущие шаблоны, тренировки и планы профиля будут удалены и заменены демо-набором.'
+      ))) return;
+      try {
+        Utils.showToast('Заполняю демо...', 'info');
+        const res = await DemoData.seed();
+        Utils.showToast(`Готово: ${res.templates} шаблона, ${res.sessions} тренировок`);
+        Router.navigate('progress');
+      } catch (e) {
+        Utils.showToast(e.message || 'Ошибка демо', 'danger');
+      }
+    });
+
+    document.getElementById('clear-data-btn')?.addEventListener('click', async () => {
+      if (!(await Utils.confirm(
+        'Очистить все данные профиля?\nШаблоны, тренировки и планы будут удалены безвозвратно.'
+      ))) return;
+      try {
+        Utils.showToast('Очищаю...', 'info');
+        await DemoData.clearAll();
+        Utils.showToast('Данные профиля очищены');
+        Router.navigate('home');
+      } catch (e) {
+        Utils.showToast(e.message || 'Ошибка очистки', 'danger');
+      }
     });
 
     document.getElementById('logout-btn')?.addEventListener('click', async () => {

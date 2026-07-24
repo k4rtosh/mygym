@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mygym-v2.1.0';
+const CACHE_NAME = 'mygym-v2.2.0';
 const APP_SHELL = [
   '/mygym/',
   '/mygym/index.html',
@@ -18,6 +18,7 @@ const APP_SHELL = [
   '/mygym/js/exercises.js',
   '/mygym/js/calendar.js',
   '/mygym/js/progress.js',
+  '/mygym/js/demoData.js',
   '/mygym/pages/home.html',
   '/mygym/pages/login.html',
   '/mygym/pages/profile.html',
