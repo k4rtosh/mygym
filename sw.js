@@ -1,30 +1,44 @@
-const CACHE_NAME = 'mygym-v2.4.2';
+const CACHE_NAME = 'mygym-v2.5.0';
+
+function detectSwBasePath() {
+  try {
+    const path = new URL(self.registration.scope).pathname.replace(/\/$/, '') || '';
+    if (path === '/mygym' || path.startsWith('/mygym')) return '/mygym';
+  } catch (_) { /* ignore */ }
+  const scriptPath = self.location.pathname || '';
+  if (scriptPath.startsWith('/mygym/')) return '/mygym';
+  return '';
+}
+
+const BASE = detectSwBasePath();
+const shell = (p) => (BASE ? `${BASE}${p}` : p);
+
 const APP_SHELL = [
-  '/mygym/',
-  '/mygym/index.html',
-  '/mygym/app.js',
-  '/mygym/css/style.css',
-  '/mygym/js/config.js',
-  '/mygym/js/supabaseClient.js',
-  '/mygym/js/utils.js',
-  '/mygym/js/db.js',
-  '/mygym/js/api.js',
-  '/mygym/js/auth.js',
-  '/mygym/js/sync.js',
-  '/mygym/js/router.js',
-  '/mygym/js/templates.js',
-  '/mygym/js/workout.js',
-  '/mygym/js/history.js',
-  '/mygym/js/exercises.js',
-  '/mygym/js/calendar.js',
-  '/mygym/js/progress.js',
-  '/mygym/js/demoData.js',
-  '/mygym/pages/home.html',
-  '/mygym/pages/login.html',
-  '/mygym/pages/profile.html',
-  '/mygym/manifest.json',
-  '/mygym/icons/icon-192x192.png',
-  '/mygym/icons/favicon.svg'
+  shell('/'),
+  shell('/index.html'),
+  shell('/app.js'),
+  shell('/css/style.css'),
+  shell('/js/config.js'),
+  shell('/js/supabaseClient.js'),
+  shell('/js/utils.js'),
+  shell('/js/db.js'),
+  shell('/js/api.js'),
+  shell('/js/auth.js'),
+  shell('/js/sync.js'),
+  shell('/js/router.js'),
+  shell('/js/templates.js'),
+  shell('/js/workout.js'),
+  shell('/js/history.js'),
+  shell('/js/exercises.js'),
+  shell('/js/calendar.js'),
+  shell('/js/progress.js'),
+  shell('/js/demoData.js'),
+  shell('/pages/home.html'),
+  shell('/pages/login.html'),
+  shell('/pages/profile.html'),
+  shell('/manifest.json'),
+  shell('/icons/icon-192x192.png'),
+  shell('/icons/favicon.svg')
 ];
 
 self.addEventListener('install', (event) => {
@@ -75,7 +89,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // App shell: stale-while-revalidate / cache-first with network update
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const networkFetch = fetch(event.request)

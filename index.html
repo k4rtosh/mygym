@@ -56,13 +56,17 @@
       if (!btn || !window.Router) return;
       Router.navigate(btn.dataset.nav);
     });
-    if ('serviceWorker' in navigator) {
+    (function registerServiceWorker() {
+      const cfg = window.MYGYM_CONFIG || {};
+      if (cfg.IS_NATIVE) return;
+      if (!('serviceWorker' in navigator)) return;
+      const swUrl = (cfg.BASE_PATH || '') + '/sw.js';
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/mygym/sw.js').catch((err) => {
+        navigator.serviceWorker.register(swUrl).catch((err) => {
           console.log('SW register skip:', err);
         });
       });
-    }
+    })();
   </script>
 </body>
 </html>

@@ -21,6 +21,24 @@ async function clearCacheAndReload() {
   }
 }
 
+async function initNativeShell() {
+  if (!window.MYGYM_CONFIG?.IS_NATIVE) return;
+  const plugins = window.Capacitor?.Plugins || {};
+  try {
+    if (plugins.StatusBar?.setBackgroundColor) {
+      await plugins.StatusBar.setBackgroundColor({ color: '#0c1018' });
+    }
+    if (plugins.StatusBar?.setStyle) {
+      await plugins.StatusBar.setStyle({ style: 'DARK' });
+    }
+  } catch (_) { /* optional */ }
+  try {
+    if (plugins.SplashScreen?.hide) {
+      await plugins.SplashScreen.hide();
+    }
+  } catch (_) { /* optional */ }
+}
+
 window.APP_VERSION = APP_VERSION;
 window.clearCacheAndReload = clearCacheAndReload;
 window.exportData = () => SyncManager.exportData();
@@ -36,6 +54,7 @@ window.importData = () => {
 
 async function initApp() {
   try {
+    await initNativeShell();
     await DB.init();
 
     const draft = await DB.loadActiveSession();

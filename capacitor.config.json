@@ -1,0 +1,19 @@
+{
+  "appId": "com.k4rtosh.mygym",
+  "appName": "MyGym",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#0c1018"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "backgroundColor": "#0c1018",
+      "showSpinner": false
+    }
+  }
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MyGym</string>
+    <string name="title_activity_main">MyGym</string>
+    <string name="package_name">com.k4rtosh.mygym</string>
+    <string name="custom_url_scheme">com.k4rtosh.mygym</string>
+</resources>

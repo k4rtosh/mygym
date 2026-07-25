@@ -1,6 +1,16 @@
 node_modules/
-package-lock.json
 .env
 .env.*
 *.log
 .DS_Store
+www/
+android/.gradle/
+android/app/build/
+android/build/
+android/captures/
+android/local.properties
+android/*.iml
+android/.idea/
+*.apk
+*.aab
+*.keystore

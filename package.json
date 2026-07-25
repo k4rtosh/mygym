@@ -1,17 +1,29 @@
 {
-  "name": "mygym-github",
-  "version": "1.0.0",
-  "description": "Офлайн-макет дневника тренировок с облачным аккаунтом, календарём и графиками.",
+  "name": "mygym",
+  "version": "2.5.0",
+  "description": "MyGym — дневник тренировок (PWA + Android via Capacitor)",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "npx --yes serve -l 5500",
+    "build:www": "node scripts/build-www.js",
+    "cap:sync": "npm run build:www && npx cap sync android",
+    "cap:open": "npx cap open android",
+    "android:apk": "npm run cap:sync && cd android && gradlew.bat assembleDebug"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["mygym", "pwa", "capacitor"],
+  "author": "k4rtosh",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@capacitor/android": "^7.4.2",
+    "@capacitor/core": "^7.4.2",
+    "@capacitor/splash-screen": "^7.0.1",
+    "@capacitor/status-bar": "^7.0.1",
     "@supabase/supabase-js": "^2.110.8",
     "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.4.2"
   }
 }

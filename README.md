@@ -2,58 +2,88 @@
 
 PWA-дневник тренировок: облачный аккаунт (Supabase), шаблоны, календарь план/факт, прогресс по упражнениям.
 
-**Live:** [k4rtosh.github.io/mygym](https://k4rtosh.github.io/mygym/) · репозиторий [k4rtosh/mygym](https://github.com/k4rtosh/mygym)
+Один репозиторий — **два канала**:
 
-Версия: см. `version.json` (сейчас **2.4.2**).
+| Канал | Как пользоваться |
+|--------|------------------|
+| **Web** | [k4rtosh.github.io/mygym](https://k4rtosh.github.io/mygym/) — браузер или «На экран Домой» |
+| **Android** | APK через Capacitor (см. ниже) |
+
+Аккаунт и данные общие (Supabase). Версия: **2.5.0** (`version.json`).
 
 ## Возможности
 
 - Регистрация / вход (email + пароль), данные в Postgres + RLS
-- Шаблоны тренировок (порядок упражнений, мульти-добавление, фильтр по мышцам и оборудованию)
-- Активная тренировка: подходы, таймеры, rest timer, черновик в IndexedDB, продолжение после перезагрузки
-- Календарь: 1 день = 1 тренировка, статусы план / выполнено / пропуск
-- Прогресс: графики макс. веса (или доп. веса для BW) и объёма
-- Каталог **~188 упражнений**: свободный вес, блочный, хаммер, тренажёр, собственный вес, кардио
-- Для BW в логе — поле «Доп. вес» (0 = без довеска)
-- Профиль: экспорт JSON, импорт старого бэкапа в облако, демо-данные, обновление кэша PWA
+- Шаблоны (фильтр по мышцам и оборудованию)
+- Активная тренировка: подходы, таймеры, черновик в IndexedDB
+- Календарь: план / выполнено / пропуск
+- Прогресс: графики веса и объёма; для BW — «доп. вес»
+- Каталог ~188 упражнений (свободный вес, блочный, хаммер, тренажёр, BW, кардио)
+- Профиль: экспорт/импорт, демо-данные, обновление кэша PWA
 
 ## Стек
 
-Vanilla JS · Bootstrap 5 · Bootstrap Icons · Chart.js · Service Worker · Supabase Auth + Postgres
+Vanilla JS · Bootstrap 5 · Chart.js · Service Worker · Supabase · **Capacitor 7** (Android)
 
-## Локальный запуск
+## Локальный запуск (web)
 
 ```bash
-npx --yes serve -l 5500
+npm start
+# или: npx --yes serve -l 5500
 ```
 
 Открой `http://localhost:5500`.  
-На GitHub Pages база пути `/mygym/` — как в `sw.js` и `manifest.json`.
+GitHub Pages: путь `/mygym/` — `BASE_PATH` определяется автоматически.
+
+## Android APK (для друзей)
+
+Нужны: [Node.js](https://nodejs.org/), [Android Studio](https://developer.android.com/studio) (JDK + SDK).
+
+```bash
+npm install
+npm run cap:sync          # www/ + sync в android/
+npm run cap:open          # открыть Android Studio → Run
+# или из командной строки:
+cd android
+.\gradlew.bat assembleDebug
+```
+
+Готовый файл:
+
+`android/app/build/outputs/apk/debug/app-debug.apk`
+
+Установка на телефон: разрешить установку из неизвестных источников → открыть APK.
+
+После правок веб-кода всегда:
+
+```bash
+npm run cap:sync
+```
+
+и пересобери APK.
 
 ## Supabase
 
 Проект: **mygym** (`gkcjwunfgzhidqyyhhik`).  
-Ключ приложения: `js/config.js` (publishable).  
-Схема и сид: `supabase/schema.sql`, `supabase/seed_exercises.sql`.
-
-Подробности по Auth и Dashboard — [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
+Ключ: `js/config.js` (publishable).  
+Схема/сид: `supabase/`. Подробнее — [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
 
 ## Структура
 
 | Путь | Назначение |
 |------|------------|
-| `index.html` | Оболочка PWA + нижняя навигация |
-| `js/` | Auth, API, workout, templates, calendar, progress… |
-| `pages/` | HTML-фрагменты экранов |
-| `data/exercises.json` | Каталог упражнений (зеркало сида) |
-| `scripts/` | Expand / normalize / seed каталога |
-| `icons/` | Favicon и иконки PWA |
+| `index.html`, `js/`, `pages/`, `css/` | Web / PWA (деплой на Pages) |
+| `www/` | Копия для Capacitor (генерируется, в git нет) |
+| `android/` | Нативный Android-проект |
+| `capacitor.config.json` | Конфиг Capacitor |
+| `scripts/build-www.js` | Сборка `www/` |
+| `data/exercises.json` | Каталог упражнений |
 
 ## Скрипты каталога
 
 ```bash
-node scripts/expand-exercises.js      # разовое расширение (идемпотентно по id)
-node scripts/normalize-equipment.js   # типы оборудования + хаммер
-node scripts/add-traps.js             # трапеции
+node scripts/expand-exercises.js
+node scripts/normalize-equipment.js
+node scripts/add-traps.js
 # MYGYM_DB_PASSWORD=... node scripts/seed-exercises.js
 ```
