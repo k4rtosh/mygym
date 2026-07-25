@@ -1,0 +1,98 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'js/**'
+      - 'css/**'
+      - 'pages/**'
+      - 'data/**'
+      - 'icons/**'
+      - 'index.html'
+      - 'app.js'
+      - 'sw.js'
+      - 'manifest.json'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/build-www.js'
+      - '.github/workflows/android-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    name: Debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build www + Cap sync
+        run: npm run cap:sync
+
+      - name: Assemble debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Stage APK
+        id: stage
+        run: |
+          SRC="android/app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$SRC"
+          DEST="MyGym-2.5.0-debug-${{ github.run_number }}.apk"
+          cp "$SRC" "$DEST"
+          echo "apk=$DEST" >> "$GITHUB_OUTPUT"
+          ls -lh "$DEST"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mygym-android-apk
+          path: ${{ steps.stage.outputs.apk }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub Release (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-build-${{ github.run_number }}
+          name: MyGym Android ${{ github.run_number }}
+          body: |
+            Debug APK для установки на телефон (пет-проект).
+
+            1. Скачай `MyGym-*.apk`
+            2. На Android разреши установку из неизвестных источников
+            3. Открой файл и установи
+
+            Web: https://k4rtosh.github.io/mygym/
+          files: ${{ steps.stage.outputs.apk }}
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

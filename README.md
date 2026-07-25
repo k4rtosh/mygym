@@ -37,30 +37,24 @@ GitHub Pages: путь `/mygym/` — `BASE_PATH` определяется авт
 
 ## Android APK (для друзей)
 
-Нужны: [Node.js](https://nodejs.org/), [Android Studio](https://developer.android.com/studio) (JDK + SDK).
+**Тебе не обязательно ставить Android Studio.** APK собирается в GitHub Actions:
+
+1. Открой репозиторий → вкладка **Actions** → workflow **Build Android APK**
+2. Или скачай готовый файл со страницы **Releases**
+3. На телефоне разреши установку из неизвестных источников → открой APK
+
+Ручная сборка (если есть Android Studio / SDK):
 
 ```bash
 npm install
-npm run cap:sync          # www/ + sync в android/
-npm run cap:open          # открыть Android Studio → Run
-# или из командной строки:
+npm run cap:sync
 cd android
 .\gradlew.bat assembleDebug
 ```
 
-Готовый файл:
+Файл: `android/app/build/outputs/apk/debug/app-debug.apk`
 
-`android/app/build/outputs/apk/debug/app-debug.apk`
-
-Установка на телефон: разрешить установку из неизвестных источников → открыть APK.
-
-После правок веб-кода всегда:
-
-```bash
-npm run cap:sync
-```
-
-и пересобери APK.
+После правок веб-кода push в `main` сам пересоберёт APK (или запусти workflow вручную: Actions → Build Android APK → Run workflow).
 
 ## Supabase
 
