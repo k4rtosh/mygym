@@ -278,6 +278,13 @@ class AppRouter {
     });
 
     document.getElementById('update-app-btn')?.addEventListener('click', () => {
+      if (window.MYGYM_CONFIG?.IS_NATIVE) {
+        window.alert(
+          'В Android-приложении интерфейс вшит в APK.\n\n' +
+          '«Обновить кэш» почти ничего не даст — скачай новый APK из GitHub Actions и установи поверх.'
+        );
+        return;
+      }
       if (window.clearCacheAndReload) window.clearCacheAndReload();
     });
 

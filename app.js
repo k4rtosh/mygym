@@ -21,10 +21,26 @@ async function clearCacheAndReload() {
   }
 }
 
+function markNativeShell() {
+  const cfg = window.MYGYM_CONFIG;
+  if (!cfg?.IS_NATIVE) return;
+  document.documentElement.classList.add('is-native');
+  try {
+    const platform = window.Capacitor?.getPlatform?.() || '';
+    if (platform === 'android') document.documentElement.classList.add('is-native-android');
+    if (platform === 'ios') document.documentElement.classList.add('is-native-ios');
+  } catch (_) { /* ignore */ }
+}
+
 async function initNativeShell() {
+  markNativeShell();
   if (!window.MYGYM_CONFIG?.IS_NATIVE) return;
   const plugins = window.Capacitor?.Plugins || {};
   try {
+    // Keep WebView below the status bar (fixes header under clock/battery)
+    if (plugins.StatusBar?.setOverlaysWebView) {
+      await plugins.StatusBar.setOverlaysWebView({ overlay: false });
+    }
     if (plugins.StatusBar?.setBackgroundColor) {
       await plugins.StatusBar.setBackgroundColor({ color: '#0c1018' });
     }
@@ -65,7 +81,6 @@ async function initApp() {
       return;
     }
 
-    // Warm exercise cache
     try {
       const exercises = await Api.listExercises();
       await DB.cacheExercises(exercises);
