@@ -78,8 +78,8 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish GitHub Release (main only)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Publish GitHub Release
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-build-${{ github.run_number }}
@@ -87,11 +87,12 @@ jobs:
           body: |
             Debug APK для установки на телефон (пет-проект).
 
-            1. Скачай `MyGym-*.apk`
+            1. Скачай `MyGym-*.apk` (или zip artifact `mygym-android-apk`)
             2. На Android разреши установку из неизвестных источников
             3. Открой файл и установи
 
             Web: https://k4rtosh.github.io/mygym/
+            Artifacts run: https://github.com/k4rtosh/mygym/actions
           files: ${{ steps.stage.outputs.apk }}
           make_latest: true
         env:

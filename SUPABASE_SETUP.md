@@ -1,32 +1,35 @@
-# Supabase — статус для проекта mygym
+# Supabase — MyGym
 
 URL: `https://gkcjwunfgzhidqyyhhik.supabase.co`  
-Ключ в приложении: `js/config.js` (publishable)
+Ключ в приложении: `js/config.js` (publishable / anon)
 
-## Уже сделано автоматически
+## Сделано
 
 - Таблицы: `profiles`, `exercises`, `templates`, `sessions`, `planned_workouts`
-- RLS + триггер создания профиля при регистрации
-- В каталог залито **~188 упражнений**
+- RLS + триггер профиля при регистрации
+- Каталог **~188 упражнений** (типы оборудования нормализованы)
+- Email Auth; для пет-проекта обычно **Confirm email** выключен (иначе после signup нет сессии)
 
-## Осталось сделать тебе в Dashboard (1 минута)
+## Auth (если снова спросит подтверждение почты)
 
-Сейчас регистрация создаёт пользователя, но **сессия не выдаётся**, пока не подтверждена почта.
-
-1. Открой: https://supabase.com/dashboard/project/gkcjwunfgzhidqyyhhik/auth/providers
-2. **Email** → выключи **Confirm email**
-3. Save
-
-После этого регистрация в MyGym сразу пускает в приложение (удобно для тебя и друзей).
+1. https://supabase.com/dashboard/project/gkcjwunfgzhidqyyhhik/auth/providers  
+2. Email → выключи **Confirm email** → Save
 
 ## Проверка
 
-1. Открой приложение
-2. Регистрация: имя + email + пароль (≥6)
-3. Должна открыться главная
-4. В Dashboard → Table Editor → `profiles` появится строка
+1. Web или APK → регистрация (имя + email + пароль ≥6)
+2. Открывается главная
+3. Dashboard → Table Editor → `profiles` — новая строка
+
+## Клиенты
+
+| Клиент | Как ходит в API |
+|--------|------------------|
+| GitHub Pages PWA | браузер, SW, BASE_PATH=`/mygym` |
+| Android APK | Capacitor WebView, тот же publishable key |
 
 ## Безопасность
 
-Пароль от БД **не** лежит в коде приложения (только publishable key).  
-Раз пароль светился в чате — позже лучше сменить его в Supabase → Project Settings → Database.
+- В клиенте только publishable key (не DB password).
+- Если пароль БД светился в чатах — смени в Project Settings → Database.
+- RLS обязателен: пользователи видят только свои templates/sessions/plans.

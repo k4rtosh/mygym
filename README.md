@@ -1,77 +1,81 @@
 # MyGym
 
-PWA-дневник тренировок: облачный аккаунт (Supabase), шаблоны, календарь план/факт, прогресс по упражнениям.
+PWA-дневник тренировок: облачный аккаунт (Supabase), шаблоны, календарь план/факт, прогресс.
 
-Один репозиторий — **два канала**:
+Один репозиторий — **два канала** (общие аккаунты и данные):
 
 | Канал | Как пользоваться |
 |--------|------------------|
-| **Web** | [k4rtosh.github.io/mygym](https://k4rtosh.github.io/mygym/) — браузер или «На экран Домой» |
-| **Android** | APK через Capacitor (см. ниже) |
+| **Web** | [k4rtosh.github.io/mygym](https://k4rtosh.github.io/mygym/) |
+| **Android** | Debug APK из GitHub Actions (см. ниже) |
 
-Аккаунт и данные общие (Supabase). Версия: **2.5.0** (`version.json`).
+Версия: **2.5.0**. Подробности архитектуры — [TECHNICAL.md](TECHNICAL.md).
+
+## Где скачать APK
+
+Готовая сборка уже есть:
+
+1. Открой успешный run:  
+   **https://github.com/k4rtosh/mygym/actions/runs/30152356177**
+2. Внизу страницы → **Artifacts** → **`mygym-android-apk`** (~3.7 MB)
+3. Скачается **zip** — внутри файл `MyGym-*.apk`
+4. На телефоне: разреши установку из неизвестных источников → открой APK
+
+Нужен вход в GitHub (artifacts приватны для скачивания без логина).  
+Также смотри вкладку [Releases](https://github.com/k4rtosh/mygym/releases) после следующих сборок.
+
+Пересобрать: **Actions** → **Build Android APK** → **Run workflow**.
 
 ## Возможности
 
-- Регистрация / вход (email + пароль), данные в Postgres + RLS
-- Шаблоны (фильтр по мышцам и оборудованию)
+- Регистрация / вход (email + пароль), Postgres + RLS
+- Шаблоны: фильтр по мышцам и оборудованию
 - Активная тренировка: подходы, таймеры, черновик в IndexedDB
-- Календарь: план / выполнено / пропуск
-- Прогресс: графики веса и объёма; для BW — «доп. вес»
+- Календарь: план / выполнено / пропуск (1 день = 1 тренировка)
+- Прогресс: графики веса и объёма; BW → поле «доп. вес»
 - Каталог ~188 упражнений (свободный вес, блочный, хаммер, тренажёр, BW, кардио)
-- Профиль: экспорт/импорт, демо-данные, обновление кэша PWA
+- Профиль: экспорт/импорт JSON, демо-данные, сброс кэша PWA
 
 ## Стек
 
-Vanilla JS · Bootstrap 5 · Chart.js · Service Worker · Supabase · **Capacitor 7** (Android)
+Vanilla JS · Bootstrap 5 · Chart.js · Service Worker · Supabase · Capacitor 7
 
 ## Локальный запуск (web)
 
 ```bash
 npm start
-# или: npx --yes serve -l 5500
+# http://localhost:5500
 ```
 
-Открой `http://localhost:5500`.  
-GitHub Pages: путь `/mygym/` — `BASE_PATH` определяется автоматически.
+GitHub Pages: база `/mygym/` (`BASE_PATH` в `js/config.js`).
 
-## Android APK (для друзей)
+## Android вручную (опционально)
 
-**Тебе не обязательно ставить Android Studio.** APK собирается в GitHub Actions:
-
-1. Открой репозиторий → вкладка **Actions** → workflow **Build Android APK**
-2. Или скачай готовый файл со страницы **Releases**
-3. На телефоне разреши установку из неизвестных источников → открой APK
-
-Ручная сборка (если есть Android Studio / SDK):
+Нужны Node + Android Studio/SDK. Обычно **не нужно** — достаточно CI.
 
 ```bash
 npm install
 npm run cap:sync
-cd android
-.\gradlew.bat assembleDebug
+cd android && ./gradlew assembleDebug   # Windows: gradlew.bat
 ```
 
-Файл: `android/app/build/outputs/apk/debug/app-debug.apk`
-
-После правок веб-кода push в `main` сам пересоберёт APK (или запусти workflow вручную: Actions → Build Android APK → Run workflow).
+APK: `android/app/build/outputs/apk/debug/app-debug.apk`
 
 ## Supabase
 
-Проект: **mygym** (`gkcjwunfgzhidqyyhhik`).  
-Ключ: `js/config.js` (publishable).  
-Схема/сид: `supabase/`. Подробнее — [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
+Проект **mygym** (`gkcjwunfgzhidqyyhhik`).  
+Ключ: `js/config.js`. Схема/сид: `supabase/`.  
+Настройка Auth: [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
 
-## Структура
+## Структура (кратко)
 
 | Путь | Назначение |
 |------|------------|
-| `index.html`, `js/`, `pages/`, `css/` | Web / PWA (деплой на Pages) |
-| `www/` | Копия для Capacitor (генерируется, в git нет) |
-| `android/` | Нативный Android-проект |
-| `capacitor.config.json` | Конфиг Capacitor |
-| `scripts/build-www.js` | Сборка `www/` |
+| `js/`, `pages/`, `css/` | Web / PWA |
+| `android/` | Capacitor Android |
+| `www/` | webDir (генерируется, не в git) |
 | `data/exercises.json` | Каталог упражнений |
+| `TECHNICAL.md` | Техническое описание |
 
 ## Скрипты каталога
 
