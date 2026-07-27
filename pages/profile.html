@@ -21,6 +21,23 @@
     </div>
   </div>
 
+  <div class="card mb-3" id="profile-update-card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h6 class="mb-0">Обновления</h6>
+      <span class="badge bg-secondary" id="profile-update-badge">v2.2.0</span>
+    </div>
+    <div class="card-body">
+      <p class="small mb-2" id="profile-update-status">Проверяю обновления...</p>
+      <div class="update-notes small text-muted mb-3 d-none" id="profile-update-notes"></div>
+      <button class="btn btn-primary w-100 d-none" id="update-app-btn">
+        <i class="bi bi-arrow-clockwise"></i> Обновить приложение
+      </button>
+      <button class="btn btn-outline-light w-100 btn-sm mt-2 d-none" id="check-updates-btn">
+        <i class="bi bi-search"></i> Проверить снова
+      </button>
+    </div>
+  </div>
+
   <div class="card mb-3">
     <div class="card-header"><h6 class="mb-0">Данные</h6></div>
     <div class="card-body">
@@ -30,11 +47,8 @@
       <button class="btn btn-outline-light w-100 mb-2" id="import-data-btn">
         <i class="bi bi-upload"></i> Импорт старого бэкапа в облако
       </button>
-      <button class="btn btn-outline-info w-100 mb-2" id="open-exercises-btn">
+      <button class="btn btn-outline-info w-100" id="open-exercises-btn">
         <i class="bi bi-book"></i> База упражнений
-      </button>
-      <button class="btn btn-outline-primary w-100" id="update-app-btn">
-        <i class="bi bi-cloud-download"></i> Обновить кэш (только web)
       </button>
     </div>
   </div>

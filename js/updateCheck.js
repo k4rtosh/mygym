@@ -1,6 +1,8 @@
 // Проверка обновлений — web (кэш) и Android APK (скачивание)
 const UpdateCheck = {
-  DISMISS_KEY: 'mygym_dismissed_version',
+  DISMISS_KEY: 'mygym_dismissed_update',
+  REMIND_AFTER_MS: 24 * 60 * 60 * 1000,
+  _cachedStatus: null,
 
   currentVersion() {
     return window.MYGYM_CONFIG?.APP_VERSION || window.APP_VERSION || '0.0.0';
@@ -31,7 +33,7 @@ const UpdateCheck = {
   },
 
   isUpdateAvailable(manifest) {
-    return this.compareVersions(this.currentVersion(), manifest.version) < 0;
+    return manifest?.version && this.compareVersions(this.currentVersion(), manifest.version) < 0;
   },
 
   isBlocking(manifest) {
@@ -41,17 +43,35 @@ const UpdateCheck = {
     return false;
   },
 
-  wasDismissed(version) {
+  getDismissInfo() {
     try {
-      return localStorage.getItem(this.DISMISS_KEY) === version;
+      const raw = localStorage.getItem(this.DISMISS_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.version) return parsed;
+      // legacy: plain version string
+      return { version: raw, at: 0 };
     } catch {
-      return false;
+      return null;
     }
+  },
+
+  wasDismissedRecently(version) {
+    const info = this.getDismissInfo();
+    if (!info || info.version !== version) return false;
+    if (!info.at) return true;
+    return (Date.now() - info.at) < this.REMIND_AFTER_MS;
   },
 
   dismiss(version) {
     try {
-      localStorage.setItem(this.DISMISS_KEY, version);
+      localStorage.setItem(this.DISMISS_KEY, JSON.stringify({ version, at: Date.now() }));
+    } catch { /* ignore */ }
+  },
+
+  clearDismiss() {
+    try {
+      localStorage.removeItem(this.DISMISS_KEY);
     } catch { /* ignore */ }
   },
 
@@ -68,6 +88,10 @@ const UpdateCheck = {
     return String(notes);
   },
 
+  apkUrl(manifest) {
+    return manifest.apkDownloadUrl || manifest.releasesPageUrl || 'https://github.com/k4rtosh/mygym/releases/latest';
+  },
+
   openDownloadUrl(url) {
     if (!url) return;
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -81,6 +105,44 @@ const UpdateCheck = {
     }
   },
 
+  async applyUpdate(manifest) {
+    if (!manifest) return;
+    if (window.MYGYM_CONFIG?.IS_NATIVE) {
+      this.openDownloadUrl(this.apkUrl(manifest));
+      Utils.showToast('Скачай APK и установи поверх текущей версии', 'info');
+      return;
+    }
+    Utils.showToast('Обновляю...', 'info');
+    await this.applyWebUpdate();
+  },
+
+  buildStatus(manifest) {
+    const available = this.isUpdateAvailable(manifest);
+    return {
+      manifest,
+      available,
+      blocking: available && this.isBlocking(manifest),
+      current: this.currentVersion(),
+      latest: manifest?.version || this.currentVersion(),
+      checkedAt: Date.now()
+    };
+  },
+
+  async getStatus({ force = false } = {}) {
+    if (!force && this._cachedStatus && (Date.now() - this._cachedStatus.checkedAt) < 5 * 60 * 1000) {
+      return this._cachedStatus;
+    }
+    const manifest = await this.fetchManifest();
+    this._cachedStatus = this.buildStatus(manifest);
+    return this._cachedStatus;
+  },
+
+  shouldShowModal(status) {
+    if (!status?.available) return false;
+    if (status.blocking) return true;
+    return !this.wasDismissedRecently(status.latest);
+  },
+
   showModal(manifest, blocking) {
     if (document.getElementById('update-modal')) return;
 
@@ -88,7 +150,7 @@ const UpdateCheck = {
     const current = this.currentVersion();
     const latest = manifest.version;
     const notes = this.formatNotes(manifest.releaseNotes);
-    const apkUrl = manifest.apkDownloadUrl || manifest.releasesPageUrl || 'https://github.com/k4rtosh/mygym/releases/latest';
+    const apkUrl = this.apkUrl(manifest);
     const title = blocking ? 'Требуется обновление' : 'Доступно обновление';
 
     const modal = document.createElement('div');
@@ -103,7 +165,7 @@ const UpdateCheck = {
     modal.innerHTML = `
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-dark text-light border-secondary update-modal-content">
-          <div class="modal-header border-secondary ${blocking ? '' : ''}">
+          <div class="modal-header border-secondary">
             <h5 class="modal-title ${blocking ? 'text-danger' : 'text-warning'}">
               <i class="bi bi-${blocking ? 'exclamation-octagon' : 'arrow-up-circle'}"></i>
               ${Utils.escapeHtml(title)}
@@ -130,6 +192,7 @@ const UpdateCheck = {
                 Нажмите «Обновить» — страница перезагрузится с актуальной версией.
               </div>
             `}
+            ${!blocking ? '<p class="text-muted small mt-3 mb-0">Напомним снова через 24 часа или в профиле.</p>' : ''}
           </div>
           <div class="modal-footer border-secondary flex-wrap gap-2">
             ${isNative ? `
@@ -156,7 +219,7 @@ const UpdateCheck = {
     });
 
     modal.querySelector('#update-apply-btn')?.addEventListener('click', () => {
-      this.applyWebUpdate();
+      this.applyUpdate(manifest);
     });
 
     modal.addEventListener('hidden.bs.modal', () => {
@@ -165,21 +228,67 @@ const UpdateCheck = {
     });
   },
 
-  async check() {
+  async check({ showModal = true } = {}) {
     try {
-      const manifest = await this.fetchManifest();
-      if (!manifest?.version) return null;
+      const status = await this.getStatus({ force: true });
+      if (!status.available) return status;
 
-      if (!this.isUpdateAvailable(manifest)) return null;
-
-      const blocking = this.isBlocking(manifest);
-      if (!blocking && this.wasDismissed(manifest.version)) return null;
-
-      this.showModal(manifest, blocking);
-      return { manifest, blocking };
+      if (showModal && this.shouldShowModal(status)) {
+        this.showModal(status.manifest, status.blocking);
+      }
+      return status;
     } catch (e) {
       console.warn('UpdateCheck:', e.message || e);
-      return null;
+      return { available: false, error: e.message };
+    }
+  },
+
+  async refreshProfileUI() {
+    const statusEl = document.getElementById('profile-update-status');
+    const notesEl = document.getElementById('profile-update-notes');
+    const btn = document.getElementById('update-app-btn');
+    const recheckBtn = document.getElementById('check-updates-btn');
+    if (!statusEl || !btn) return;
+
+    statusEl.textContent = 'Проверяю обновления...';
+    btn.disabled = true;
+    btn.classList.add('d-none');
+    recheckBtn?.classList.add('d-none');
+    if (notesEl) notesEl.classList.add('d-none');
+
+    try {
+      const status = await this.getStatus({ force: true });
+      const isNative = !!window.MYGYM_CONFIG?.IS_NATIVE;
+
+      if (status.available) {
+        statusEl.innerHTML = `
+          <span class="text-warning">Доступна версия <strong>v${Utils.escapeHtml(status.latest)}</strong></span>
+          <span class="text-muted"> · сейчас v${Utils.escapeHtml(status.current)}</span>
+        `;
+        if (notesEl) {
+          notesEl.textContent = this.formatNotes(status.manifest.releaseNotes);
+          notesEl.classList.remove('d-none');
+        }
+        btn.innerHTML = isNative
+          ? '<i class="bi bi-download"></i> Обновить приложение (скачать APK)'
+          : '<i class="bi bi-arrow-clockwise"></i> Обновить приложение';
+        btn.className = 'btn btn-primary w-100';
+        btn.disabled = false;
+        btn.classList.remove('d-none');
+        recheckBtn?.classList.remove('d-none');
+        btn.onclick = () => this.applyUpdate(status.manifest);
+      } else {
+        statusEl.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> У вас актуальная версия v${Utils.escapeHtml(status.current)}</span>`;
+        btn.classList.add('d-none');
+        recheckBtn?.classList.remove('d-none');
+      }
+    } catch (e) {
+      statusEl.textContent = 'Не удалось проверить обновления. Проверьте интернет.';
+      recheckBtn?.classList.remove('d-none');
+    }
+
+    if (recheckBtn) {
+      recheckBtn.onclick = () => this.refreshProfileUI();
     }
   }
 };
