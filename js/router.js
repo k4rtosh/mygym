@@ -295,13 +295,20 @@ class AppRouter {
     }
 
     const version = window.MYGYM_CONFIG?.APP_VERSION || '2.0.0';
+    const versionLabel = version.startsWith('v') ? version : `v${version}`;
     document.querySelectorAll('#app-version-display, #update-version-display, #footer-version-display')
       .forEach((el) => { if (el) el.textContent = version; });
+    const updateBadge = document.getElementById('profile-update-badge');
+    if (updateBadge) updateBadge.textContent = versionLabel;
 
     const footerNote = document.querySelector('#profile-footer-note');
     if (footerNote) {
       const isDemo = window.DemoMode?.isDemo?.();
       footerNote.textContent = isDemo ? 'данные хранятся локально' : 'данные в Supabase';
+    }
+
+    if (window.UpdateCheck) {
+      UpdateCheck.refreshProfileUI().catch(() => {});
     }
 
     document.getElementById('export-data-btn')?.addEventListener('click', () => SyncManager.exportData());
@@ -318,17 +325,6 @@ class AppRouter {
 
     document.getElementById('open-exercises-btn')?.addEventListener('click', () => {
       Router.navigate('exercises');
-    });
-
-    document.getElementById('update-app-btn')?.addEventListener('click', () => {
-      if (window.MYGYM_CONFIG?.IS_NATIVE) {
-        window.alert(
-          'В Android-приложении интерфейс вшит в APK.\n\n' +
-          '«Обновить кэш» почти ничего не даст — скачай новый APK из GitHub Actions и установи поверх.'
-        );
-        return;
-      }
-      if (window.clearCacheAndReload) window.clearCacheAndReload();
     });
 
     document.getElementById('clear-data-btn')?.addEventListener('click', async () => {
