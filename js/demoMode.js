@@ -223,6 +223,8 @@
       this.currentUser = null;
       this.profile = null;
       await DB.clearActiveSession();
+      // Перезагрузка — чтобы вернуть настоящие Api/Auth
+      location.reload();
     },
 
     getCurrentUser() {
@@ -233,10 +235,34 @@
     isLoggedIn() { return this.currentUser !== null; }
   };
 
-  // Activate demo shims — replace global Api/Auth when in demo mode
+  // Activate demo shims — mutate existing Api/Auth in place
+  // (scripts use lexical `const Api`/`const Auth`, not window.Api/Auth)
   function activateDemoShims() {
-    window.Api = DemoApi;
-    window.Auth = DemoAuth;
+    if (window.Api) {
+      Object.keys(DemoApi).forEach((key) => {
+        const val = DemoApi[key];
+        window.Api[key] = typeof val === 'function' ? val.bind(DemoApi) : val;
+      });
+    }
+    if (window.Auth) {
+      window.Auth.signIn = DemoAuth.signIn.bind(DemoAuth);
+      window.Auth.signUp = DemoAuth.signUp.bind(DemoAuth);
+      window.Auth.logout = DemoAuth.logout.bind(DemoAuth);
+      window.Auth.init = DemoAuth.init.bind(DemoAuth);
+      window.Auth.getCurrentUser = DemoAuth.getCurrentUser.bind(DemoAuth);
+      window.Auth.isLoggedIn = DemoAuth.isLoggedIn.bind(DemoAuth);
+      // Keep Auth.currentUser/profile in sync with DemoAuth
+      Object.defineProperty(window.Auth, 'currentUser', {
+        get() { return DemoAuth.currentUser; },
+        set(v) { DemoAuth.currentUser = v; },
+        configurable: true
+      });
+      Object.defineProperty(window.Auth, 'profile', {
+        get() { return DemoAuth.profile; },
+        set(v) { DemoAuth.profile = v; },
+        configurable: true
+      });
+    }
   }
 
   // Expose
