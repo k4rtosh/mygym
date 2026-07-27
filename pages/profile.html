@@ -39,15 +39,16 @@
     </div>
   </div>
 
-  <div class="card mb-3">
-    <div class="card-header"><h6 class="mb-0">Тест / отладка</h6></div>
+  <div class="card mb-3 profile-danger-zone">
+    <div class="card-header border-danger">
+      <h6 class="mb-0 text-danger"><i class="bi bi-exclamation-triangle"></i> Опасная зона</h6>
+    </div>
     <div class="card-body">
-      <p class="text-muted small mb-3">Быстро залить демо-историю для графиков или очистить облачные данные профиля.</p>
-      <button class="btn btn-outline-success w-100 mb-2" id="seed-demo-btn">
-        <i class="bi bi-magic"></i> Заполнить тестовыми данными
-      </button>
+      <p class="text-muted small mb-3">
+        Удалит все шаблоны, тренировки и планы. Действие необратимо — для подтверждения нужно ввести фразу <strong>ОЧИСТКА</strong>.
+      </p>
       <button class="btn btn-outline-danger w-100" id="clear-data-btn">
-        <i class="bi bi-trash"></i> Очистить данные профиля
+        <i class="bi bi-trash"></i> Очистить все данные
       </button>
     </div>
   </div>
@@ -57,6 +58,6 @@
   </button>
 
   <div class="text-center mt-4">
-    <small class="text-muted">MyGym v<span id="footer-version-display">2.2.0</span> · данные в Supabase</small>
+    <small class="text-muted">MyGym v<span id="footer-version-display">2.2.0</span> · <span id="profile-footer-note">данные в Supabase</span></small>
   </div>
 </div>
