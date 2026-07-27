@@ -14,3 +14,4 @@ android/.idea/
 *.apk
 *.aab
 *.keystore
+!android/keystores/mygym-debug.keystore
