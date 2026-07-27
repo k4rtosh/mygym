@@ -65,6 +65,9 @@ class AppRouter {
       } else {
         Utils.setShellNav(Utils.shellNavActiveFor(path));
       }
+      if (window.DemoMode?.isDemo?.() && window.showDemoBadge) {
+        window.showDemoBadge();
+      }
     } catch (error) {
       console.error(error);
       this.container.innerHTML = `

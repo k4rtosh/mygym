@@ -56,12 +56,30 @@ async function initNativeShell() {
 }
 
 function showDemoBadge() {
-  if (document.getElementById('demo-badge')) return;
-  const badge = document.createElement('div');
-  badge.id = 'demo-badge';
+  let badge = document.getElementById('demo-badge');
+  if (!badge) {
+    badge = document.createElement('span');
+    badge.id = 'demo-badge';
+    badge.className = 'demo-mode-badge';
+    badge.textContent = 'DEMO';
+  }
+  const host = document.querySelector('#app .app-header .d-flex');
+  if (host) {
+    badge.classList.remove('demo-mode-badge-floating');
+    if (!host.contains(badge)) {
+      if (host.children.length >= 2) {
+        host.insertBefore(badge, host.lastElementChild);
+      } else {
+        host.appendChild(badge);
+      }
+    }
+    return;
+  }
+  const nav = document.getElementById('shell-nav');
+  if (!nav) return;
+  badge.classList.add('demo-mode-badge-floating');
   badge.textContent = 'DEMO';
-  badge.style.cssText = 'position:fixed;top:calc(var(--safe-top, 0px) + 8px);right:8px;z-index:9999;background:#f59e0b;color:#000;font-size:0.65rem;font-weight:800;padding:2px 8px;border-radius:6px;letter-spacing:0.5px;pointer-events:none;';
-  document.body.appendChild(badge);
+  if (!document.body.contains(badge)) document.body.appendChild(badge);
 }
 window.showDemoBadge = showDemoBadge;
 
