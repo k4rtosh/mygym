@@ -60,7 +60,7 @@ function showDemoBadge() {
   const badge = document.createElement('div');
   badge.id = 'demo-badge';
   badge.textContent = 'DEMO';
-  badge.style.cssText = 'position:fixed;top:8px;right:8px;z-index:9999;background:#f59e0b;color:#000;font-size:0.65rem;font-weight:800;padding:2px 8px;border-radius:6px;letter-spacing:0.5px;pointer-events:none;';
+  badge.style.cssText = 'position:fixed;top:calc(var(--safe-top, 0px) + 8px);right:8px;z-index:9999;background:#f59e0b;color:#000;font-size:0.65rem;font-weight:800;padding:2px 8px;border-radius:6px;letter-spacing:0.5px;pointer-events:none;';
   document.body.appendChild(badge);
 }
 window.showDemoBadge = showDemoBadge;
@@ -92,7 +92,6 @@ async function initApp() {
       window.DemoMode.activateDemoShims();
     }
 
-    const draft = await DB.loadActiveSession();
     const loggedIn = await Auth.init();
 
     if (!loggedIn) {
@@ -103,6 +102,8 @@ async function initApp() {
     if (window.DemoMode && window.DemoMode.isDemo()) {
       showDemoBadge();
     }
+
+    const draft = await DB.loadActiveSession();
 
     try {
       const exercises = await Api.listExercises();

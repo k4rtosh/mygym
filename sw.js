@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mygym-v2.5.4';
+const CACHE_NAME = 'mygym-v2.5.5';
 
 function detectSwBasePath() {
   try {
