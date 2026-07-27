@@ -241,6 +241,130 @@ const Utils = {
   },
 
   /**
+   * Multi-field modal form.
+   * @param {object} options
+   * @param {string} options.title
+   * @param {string} [options.message]
+   * @param {Array<{name:string,label:string,type?:string,required?:boolean,value?:string,placeholder?:string,min?:string|number,max?:string|number,step?:string|number}>} options.fields
+   * @returns {Promise<object|null>}
+   */
+  formModal(options = {}) {
+    const {
+      title = 'Форма',
+      message = '',
+      fields = [],
+      confirmText = 'Сохранить',
+      cancelText = 'Отмена',
+      requireAny = false
+    } = options;
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        resolve(result);
+      };
+
+      const fieldsHtml = fields.map((f) => {
+        const type = f.type || 'text';
+        const req = f.required ? 'required' : '';
+        const min = f.min != null ? `min="${this.escapeHtml(String(f.min))}"` : '';
+        const max = f.max != null ? `max="${this.escapeHtml(String(f.max))}"` : '';
+        const step = f.step != null ? `step="${this.escapeHtml(String(f.step))}"` : '';
+        return `
+          <div class="mb-3">
+            <label class="form-label" for="form-field-${this.escapeHtml(f.name)}">${this.escapeHtml(f.label)}</label>
+            <input class="form-control form-control-lg" id="form-field-${this.escapeHtml(f.name)}"
+              name="${this.escapeHtml(f.name)}" type="${this.escapeHtml(type)}"
+              value="${this.escapeHtml(f.value || '')}"
+              placeholder="${this.escapeHtml(f.placeholder || '')}"
+              ${req} ${min} ${max} ${step} autocomplete="off">
+            <div class="invalid-feedback">Проверь поле</div>
+          </div>
+        `;
+      }).join('');
+
+      const { modal, bsModal } = this._createAppDialog({
+        id: 'app-form-modal',
+        title,
+        bodyHtml: `
+          ${message ? `<p class="mb-3 app-dialog-message">${this.formatDialogMessage(message)}</p>` : ''}
+          <form id="app-form-modal-form" novalidate>${fieldsHtml}</form>
+        `,
+        footerHtml: `
+          <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">${this.escapeHtml(cancelText)}</button>
+          <button type="button" class="btn btn-primary" id="app-form-ok">${this.escapeHtml(confirmText)}</button>
+        `
+      });
+
+      const form = modal.querySelector('#app-form-modal-form');
+      const submit = () => {
+        const values = {};
+        let valid = true;
+        let anyFilled = false;
+        for (const f of fields) {
+          const input = form.querySelector(`#form-field-${f.name}`);
+          if (!input) continue;
+          const raw = input.value.trim();
+          if (raw) anyFilled = true;
+          if (f.required && !raw) {
+            input.classList.add('is-invalid');
+            valid = false;
+            continue;
+          }
+          input.classList.remove('is-invalid');
+          if (f.type === 'number' && raw) {
+            const num = Number(raw.replace(',', '.'));
+            if (!Number.isFinite(num)) {
+              input.classList.add('is-invalid');
+              valid = false;
+              continue;
+            }
+            if (f.min != null && num < Number(f.min)) {
+              input.classList.add('is-invalid');
+              valid = false;
+              continue;
+            }
+            if (f.max != null && num > Number(f.max)) {
+              input.classList.add('is-invalid');
+              valid = false;
+              continue;
+            }
+            values[f.name] = num;
+          } else {
+            values[f.name] = raw || null;
+          }
+        }
+        if (requireAny && !anyFilled) {
+          form.querySelectorAll('input').forEach((el) => el.classList.add('is-invalid'));
+          valid = false;
+        }
+        if (!valid) return;
+        bsModal.hide();
+        finish(values);
+      };
+
+      form?.addEventListener('input', (e) => {
+        if (e.target?.classList) e.target.classList.remove('is-invalid');
+      });
+      form?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        submit();
+      });
+      modal.querySelector('#app-form-ok')?.addEventListener('click', submit);
+      modal.addEventListener('shown.bs.modal', () => {
+        form?.querySelector('input')?.focus();
+      });
+      modal.addEventListener('hidden.bs.modal', () => {
+        modal.remove();
+        finish(null);
+      });
+      bsModal.show();
+    });
+  },
+
+  /**
    * @returns {Promise<boolean>}
    */
   confirmPhrase({ title, message, phrase, confirmText = 'Очистить данные' }) {
@@ -348,6 +472,9 @@ const Utils = {
       templates: 'templates',
       'template-edit': 'templates',
       progress: 'progress',
+      'progress-exercises': 'progress',
+      'progress-body-weight': 'progress',
+      'progress-missed': 'progress',
       profile: 'profile',
       exercises: 'profile'
     };

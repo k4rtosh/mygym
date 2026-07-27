@@ -15,9 +15,25 @@
       </div>
       <h5 id="profile-name"></h5>
       <p class="text-muted">С нами с <span id="profile-join-date"></span></p>
+      <div class="profile-metrics mt-3" id="profile-metrics">
+        <div class="profile-metric">
+          <span class="profile-metric-label">Возраст</span>
+          <strong id="profile-age">—</strong>
+        </div>
+        <div class="profile-metric">
+          <span class="profile-metric-label">Вес</span>
+          <strong id="profile-weight">—</strong>
+        </div>
+      </div>
       <div class="mt-2">
         <span class="badge bg-info">Версия <span id="app-version-display">2.2.0</span></span>
       </div>
+      <button type="button" class="btn btn-outline-light btn-sm mt-3 d-none" id="profile-fill-metrics-btn">
+        <i class="bi bi-clipboard-plus"></i> Заполнить первичные данные
+      </button>
+      <p class="text-muted small mt-2 mb-0 d-none" id="profile-metrics-note">
+        Дату рождения и вес нельзя править вручную: возраст считается сам, вес пишется после тренировок.
+      </p>
     </div>
   </div>
 

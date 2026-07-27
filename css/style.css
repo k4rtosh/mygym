@@ -747,6 +747,114 @@ small { color: var(--text-muted); }
 .chart-stat strong.up { color: #3ddc97; }
 .chart-stat strong.down { color: #ff5a6a; }
 
+.progress-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.progress-hub-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--stroke);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+  color: var(--text-color);
+  border-radius: 16px;
+  padding: 16px 14px;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.progress-hub-item:active {
+  transform: scale(0.985);
+}
+
+.progress-hub-item:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.progress-hub-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(94, 200, 255, 0.12);
+  color: #5ec8ff;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.progress-hub-item[data-progress="body-weight"] .progress-hub-icon {
+  background: rgba(255, 90, 106, 0.12);
+  color: #ff5a6a;
+}
+
+.progress-hub-item[data-progress="missed"] .progress-hub-icon {
+  background: rgba(255, 193, 7, 0.12);
+  color: #ffc107;
+}
+
+.progress-hub-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.progress-hub-title {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #fff;
+  line-height: 1.25;
+}
+
+.progress-hub-desc {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.progress-hub-arrow {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.profile-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.profile-metric {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 10px 8px;
+}
+
+.profile-metric-label {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.profile-metric strong {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.05rem;
+  color: #fff;
+}
+
 @media (max-width: 420px) {
   .chart-stats {
     grid-template-columns: repeat(2, 1fr);

@@ -129,6 +129,11 @@ async function initApp() {
     }
 
     await Router.navigate('home');
+
+    // First-run metrics (birth date + weight) — non-blocking after home
+    if (window.Onboarding?.maybePrompt) {
+      Onboarding.maybePrompt().catch(() => {});
+    }
   } catch (error) {
     console.error(error);
     document.getElementById('app').innerHTML = `

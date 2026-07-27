@@ -32,6 +32,9 @@ class CalendarManager {
 
   static dayStatus(dateStr, plannedMap, completedMap) {
     const today = Utils.getTodayStr();
+    if (window.AnalyticsAdherence?.dayStatus) {
+      return AnalyticsAdherence.dayStatus(dateStr, plannedMap, completedMap, today);
+    }
     const hasCompleted = completedMap.has(dateStr);
     const hasPlan = plannedMap.has(dateStr);
     if (hasCompleted) return 'completed';

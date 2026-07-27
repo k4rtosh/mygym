@@ -10,11 +10,13 @@ class SyncManager {
     }
 
     try {
-      const [sessions, templates, exercises, planned] = await Promise.all([
+      const [sessions, templates, exercises, planned, bodyWeight, profile] = await Promise.all([
         Api.listSessions(),
         Api.listTemplates(),
         Api.listExercises(),
-        Api.listPlanned()
+        Api.listPlanned(),
+        Api.listBodyWeight().catch(() => []),
+        Api.getProfile().catch(() => null)
       ]);
 
       const exportData = {
@@ -27,11 +29,13 @@ class SyncManager {
         user: {
           id: user.id,
           name: user.name,
-          email: user.email
+          email: user.email,
+          birth_date: profile?.birth_date || null
         },
         sessions,
         templates,
         planned_workouts: planned,
+        body_weight_entries: bodyWeight,
         exercises
       };
 

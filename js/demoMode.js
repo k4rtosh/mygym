@@ -28,6 +28,27 @@
     localStorage.setItem(store(key), JSON.stringify(arr));
   }
 
+  function defaultDemoProfile() {
+    return {
+      id: DEMO_USER_ID,
+      display_name: 'Demo User',
+      birth_date: null,
+      created_at: new Date().toISOString()
+    };
+  }
+
+  function getDemoProfile() {
+    try {
+      const raw = localStorage.getItem(store('profile'));
+      if (raw) return { ...defaultDemoProfile(), ...JSON.parse(raw) };
+    } catch { /* ignore */ }
+    return defaultDemoProfile();
+  }
+
+  function putDemoProfile(profile) {
+    localStorage.setItem(store('profile'), JSON.stringify(profile));
+  }
+
   // Demo API — mirrors real Api interface but uses localStorage
   const DemoApi = {
     async requireUser() {
@@ -35,11 +56,76 @@
     },
 
     async getProfile() {
-      return { id: DEMO_USER_ID, display_name: 'Demo User', created_at: new Date().toISOString() };
+      return getDemoProfile();
     },
 
-    async updateProfile(displayName) {
-      return { id: DEMO_USER_ID, display_name: displayName };
+    async updateProfile(patch) {
+      const current = getDemoProfile();
+      if (typeof patch === 'string') {
+        current.display_name = patch;
+      } else if (patch && typeof patch === 'object') {
+        if (patch.displayName != null) current.display_name = patch.displayName;
+        if (patch.birthDate !== undefined && patch.birthDate !== null && patch.birthDate !== '') {
+          if (current.birth_date && current.birth_date !== patch.birthDate) {
+            throw new Error('Дата рождения уже задана и не меняется');
+          }
+          if (!current.birth_date) current.birth_date = String(patch.birthDate).slice(0, 10);
+        }
+      }
+      putDemoProfile(current);
+      DemoAuth.profile = current;
+      return current;
+    },
+
+    normalizeBodyWeight(row) {
+      if (!row) return null;
+      return {
+        id: row.id,
+        userId: row.user_id,
+        weightKg: Number(row.weight_kg),
+        measuredOn: row.measured_on,
+        sessionId: row.session_id || null,
+        source: row.source || 'workout_end',
+        createdAt: row.created_at
+      };
+    },
+
+    async listBodyWeight() {
+      return getAll('body_weight')
+        .map((r) => this.normalizeBodyWeight(r))
+        .sort((a, b) => (a.measuredOn < b.measuredOn ? -1 : 1));
+    },
+
+    async getLatestBodyWeight() {
+      const list = await this.listBodyWeight();
+      return list.length ? list[list.length - 1] : null;
+    },
+
+    async upsertBodyWeight(entry) {
+      const weightKg = Number(entry.weightKg);
+      if (!Number.isFinite(weightKg) || weightKg <= 0 || weightKg >= 500) {
+        throw new Error('Укажи вес от 1 до 499 кг');
+      }
+      const measuredOn = entry.measuredOn || Utils.getTodayStr();
+      const source = entry.source === 'onboarding' ? 'onboarding' : 'workout_end';
+      const arr = getAll('body_weight');
+      const idx = arr.findIndex((x) => x.measured_on === measuredOn);
+      const row = {
+        id: idx >= 0 ? arr[idx].id : Utils.generateId(),
+        user_id: DEMO_USER_ID,
+        weight_kg: Math.round(weightKg * 100) / 100,
+        measured_on: measuredOn,
+        session_id: entry.sessionId || null,
+        source,
+        created_at: idx >= 0 ? arr[idx].created_at : new Date().toISOString()
+      };
+      if (idx >= 0) arr[idx] = row; else arr.push(row);
+      putAll('body_weight', arr);
+      return this.normalizeBodyWeight(row);
+    },
+
+    async deleteBodyWeight(id) {
+      putAll('body_weight', getAll('body_weight').filter((x) => x.id !== id));
     },
 
     async listExercises() {
@@ -203,7 +289,7 @@
     async init() {
       if (!isDemo()) return false;
       this.currentUser = { id: DEMO_USER_ID, email: 'test@demo', user_metadata: { display_name: 'Demo User' } };
-      this.profile = { id: DEMO_USER_ID, display_name: 'Demo User', created_at: new Date().toISOString() };
+      this.profile = getDemoProfile();
       return true;
     },
 
@@ -211,7 +297,7 @@
       if (login === 'test' && password === 'test') {
         enableDemo();
         this.currentUser = { id: DEMO_USER_ID, email: 'test@demo', user_metadata: { display_name: 'Demo User' } };
-        this.profile = { id: DEMO_USER_ID, display_name: 'Demo User', created_at: new Date().toISOString() };
+        this.profile = getDemoProfile();
         return this.currentUser;
       }
       throw new Error('Неверный логин/пароль');

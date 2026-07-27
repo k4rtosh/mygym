@@ -4,10 +4,11 @@ const DemoData = {
     const user = Auth.getCurrentUser();
     if (!user) throw new Error('Нужен вход');
 
-    const [sessions, templates, planned] = await Promise.all([
+    const [sessions, templates, planned, weights] = await Promise.all([
       Api.listSessions(),
       Api.listTemplates(),
-      Api.listPlanned()
+      Api.listPlanned(),
+      Api.listBodyWeight().catch(() => [])
     ]);
 
     for (const s of sessions) {
@@ -18,6 +19,9 @@ const DemoData = {
     }
     for (const p of planned) {
       await Api.deletePlanned(p.workout_date);
+    }
+    for (const w of weights) {
+      if (w.id) await Api.deleteBodyWeight(w.id);
     }
     await DB.clearActiveSession();
   },
@@ -111,14 +115,35 @@ const DemoData = {
       });
     }
 
-    // Future plan + one missed plan
+    // Future plan + a few missed plans (for adherence chart)
     await Api.upsertPlanned(this.daysAgo(-2), push.id);
     await Api.upsertPlanned(this.daysAgo(1), pull.id);
+    await Api.upsertPlanned(this.daysAgo(5), legs.id);
+    await Api.upsertPlanned(this.daysAgo(9), push.id);
+    await Api.upsertPlanned(this.daysAgo(16), pull.id);
+
+    // Profile metrics + body weight history
+    const birth = new Date();
+    birth.setFullYear(birth.getFullYear() - 28);
+    birth.setMonth(3);
+    birth.setDate(12);
+    await Api.updateProfile({ birthDate: Utils.toDateStr(birth) });
+
+    let weight = 82.5;
+    for (const ago of [42, 35, 28, 21, 14, 7, 2]) {
+      weight = Number((weight - 0.3 + (Math.random() * 0.4 - 0.1)).toFixed(1));
+      await Api.upsertBodyWeight({
+        weightKg: weight,
+        measuredOn: this.daysAgo(ago),
+        source: ago === 42 ? 'onboarding' : 'workout_end'
+      });
+    }
 
     return {
       templates: 3,
       sessions: plans.length,
-      planned: 2
+      planned: 5,
+      bodyWeight: 7
     };
   }
 };
