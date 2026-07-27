@@ -44,10 +44,11 @@
 
     async listExercises() {
       const cached = await DB.loadExercisesCache();
-      if (cached && cached.length) return cached;
+      if (Array.isArray(cached) && cached.length) return cached;
       const resp = await fetch('data/exercises.json');
       if (!resp.ok) return [];
-      const list = await resp.json();
+      const raw = await resp.json();
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.exercises) ? raw.exercises : []);
       await DB.cacheExercises(list);
       return list;
     },
@@ -219,10 +220,11 @@
     async signUp() { throw new Error('Регистрация недоступна в демо-режиме'); },
 
     async logout() {
+      // Сначала чистим демо-черновик, пока ещё активен demo scope.
+      await DB.clearActiveSession();
       disableDemo();
       this.currentUser = null;
       this.profile = null;
-      await DB.clearActiveSession();
       // Перезагрузка — чтобы вернуть настоящие Api/Auth
       location.reload();
     },

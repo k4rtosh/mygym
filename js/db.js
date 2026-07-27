@@ -71,24 +71,51 @@ class DraftDatabase {
   }
 
   async saveActiveSession(session) {
-    await this.put('activeSession', session);
+    const scope = this.getActiveScope();
+    if (!scope) {
+      await this.put('activeSession', session);
+      return;
+    }
+    const map = (await this.get('activeSessionByScope')) || {};
+    map[scope] = session;
+    await this.put('activeSessionByScope', map);
   }
 
   async loadActiveSession() {
-    return this.get('activeSession');
+    const scope = this.getActiveScope();
+    if (!scope) return this.get('activeSession');
+    const map = (await this.get('activeSessionByScope')) || {};
+    return map[scope] || null;
   }
 
   async clearActiveSession() {
-    await this.delete('activeSession');
+    const scope = this.getActiveScope();
+    if (!scope) {
+      await this.delete('activeSession');
+      return;
+    }
+    const map = (await this.get('activeSessionByScope')) || {};
+    if (Object.prototype.hasOwnProperty.call(map, scope)) {
+      delete map[scope];
+      await this.put('activeSessionByScope', map);
+    }
   }
 
   async cacheExercises(list) {
-    await this.put('exercisesCache', { at: Date.now(), list });
+    const normalized = Array.isArray(list) ? list : (Array.isArray(list?.exercises) ? list.exercises : []);
+    await this.put('exercisesCache', { at: Date.now(), list: normalized });
   }
 
   async loadExercisesCache() {
     const cached = await this.get('exercisesCache');
-    return cached && cached.list ? cached.list : null;
+    return cached && Array.isArray(cached.list) ? cached.list : null;
+  }
+
+  getActiveScope() {
+    const isDemo = !!window.DemoMode?.isDemo?.();
+    if (isDemo) return 'demo';
+    const userId = window.Auth?.getCurrentUser?.()?.id;
+    return userId ? `user:${userId}` : null;
   }
 }
 
