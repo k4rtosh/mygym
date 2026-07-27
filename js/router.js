@@ -53,7 +53,16 @@ class AppRouter {
           await CalendarManager.load();
           break;
         case 'progress':
-          await ProgressManager.load();
+          await ProgressManager.loadHub();
+          break;
+        case 'progress-exercises':
+          await ProgressManager.loadExercises();
+          break;
+        case 'progress-body-weight':
+          await ProgressManager.loadBodyWeight();
+          break;
+        case 'progress-missed':
+          await ProgressManager.loadMissed();
           break;
         default:
           await this.navigate('home');
@@ -120,6 +129,7 @@ class AppRouter {
         await Auth.signIn(email, password);
         Utils.showToast('Добро пожаловать!');
         await Router.navigate('home');
+        if (window.Onboarding?.maybePrompt) Onboarding.maybePrompt().catch(() => {});
       } catch (e) {
         Utils.showToast(e.message || 'Ошибка входа', 'danger');
       }
@@ -171,6 +181,7 @@ class AppRouter {
         } else {
           Utils.showToast('Аккаунт создан!');
           await Router.navigate('home');
+          if (window.Onboarding?.maybePrompt) Onboarding.maybePrompt().catch(() => {});
         }
       } catch (e) {
         Utils.showToast(e.message || 'Ошибка регистрации', 'danger');
@@ -307,9 +318,17 @@ class AppRouter {
       footerNote.textContent = isDemo ? 'данные хранятся локально' : 'данные в Supabase';
     }
 
+    await this.refreshProfileMetrics();
+
     if (window.UpdateCheck) {
       UpdateCheck.refreshProfileUI().catch(() => {});
     }
+
+    document.getElementById('profile-fill-metrics-btn')?.addEventListener('click', async () => {
+      if (!window.Onboarding) return;
+      const ok = await Onboarding.maybePrompt({ force: true });
+      if (ok) await this.refreshProfileMetrics();
+    });
 
     document.getElementById('export-data-btn')?.addEventListener('click', () => SyncManager.exportData());
     document.getElementById('import-data-btn')?.addEventListener('click', () => {
@@ -330,7 +349,7 @@ class AppRouter {
     document.getElementById('clear-data-btn')?.addEventListener('click', async () => {
       const confirmed = await Utils.confirmPhrase({
         title: 'Очистить все данные?',
-        message: 'Будут удалены все шаблоны, тренировки и планы. Восстановить данные будет невозможно.',
+        message: 'Будут удалены все шаблоны, тренировки, планы и замеры веса. Восстановить данные будет невозможно.',
         phrase: 'ОЧИСТКА'
       });
       if (!confirmed) return;
@@ -349,6 +368,38 @@ class AppRouter {
       await Auth.logout();
       Router.navigate('login');
     });
+  }
+
+  async refreshProfileMetrics() {
+    const ageEl = document.getElementById('profile-age');
+    const weightEl = document.getElementById('profile-weight');
+    const fillBtn = document.getElementById('profile-fill-metrics-btn');
+    const note = document.getElementById('profile-metrics-note');
+    if (!ageEl && !weightEl) return;
+
+    let profile = null;
+    let latest = null;
+    try {
+      profile = await Api.getProfile();
+      latest = await Api.getLatestBodyWeight();
+    } catch (e) {
+      console.warn('profile metrics', e);
+    }
+
+    const age = window.AnalyticsProfile?.ageFromBirthDate?.(profile?.birth_date);
+    if (ageEl) {
+      ageEl.textContent = age != null ? `${age}` : '—';
+    }
+    if (weightEl) {
+      weightEl.textContent = latest?.weightKg != null ? `${latest.weightKg} кг` : '—';
+    }
+
+    const gaps = window.AnalyticsProfile
+      ? AnalyticsProfile.profileMetricsGaps(profile, latest)
+      : [];
+    const incomplete = gaps.length > 0;
+    fillBtn?.classList.toggle('d-none', !incomplete);
+    note?.classList.toggle('d-none', false);
   }
 }
 

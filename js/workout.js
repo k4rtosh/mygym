@@ -592,9 +592,16 @@ class WorkoutManager {
 
     await DB.clearActiveSession();
     Utils.showToast('Тренировка сохранена в облаке');
+
+    const finishedSession = this.currentSession;
     this.currentSession = null;
     this.exerciseTimers = {};
     this.exerciseTimes = {};
+
+    if (window.Onboarding?.promptBodyWeightAfterWorkout) {
+      await Onboarding.promptBodyWeightAfterWorkout(finishedSession);
+    }
+
     Router.navigate('history');
   }
 

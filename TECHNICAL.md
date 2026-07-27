@@ -1,7 +1,7 @@
 # MyGym — технический обзор проекта
 
 > Документ для разработчиков и ИИ-агентов. Описывает актуальную архитектуру, данные, модули, деплой и соглашения.  
-> Версия документа соответствует релизу **2.5.9** (см. `version.json`, `js/config.js`).
+> Версия документа соответствует релизу **2.6.0** (см. `version.json`, `js/config.js`).
 
 ---
 
@@ -52,8 +52,8 @@
 - Активная тренировка: подходы, таймеры упражнений, таймер отдыха, заметки
 - История тренировок и детальный просмотр
 - Календарь: план на день, выполнено, пропуск
-- Прогресс: графики максимального веса и объёма по упражнению
-- Каталог ~188 упражнений с фильтрами по мышцам и оборудованию
+- Прогресс по категориям: упражнения, собственный вес, пропуски
+- Первичные данные (дата рождения + вес) при первом входе; вес дальше — только после тренировки
 - Экспорт/импорт JSON (миграция со старых бэкапов)
 - Проверка обновлений (web + APK)
 
@@ -152,19 +152,24 @@ mygym/
 ├── js/                     # Логика приложения (порядок подключения важен — см. index.html)
 │   ├── config.js           # MYGYM_CONFIG, BASE_PATH, APP_VERSION
 │   ├── supabaseClient.js   # createClient(SUPABASE_URL, ANON_KEY)
-│   ├── utils.js            # Helpers, toast, confirm/prompt модалки
+│   ├── utils.js            # Helpers, toast, confirm/prompt/formModal
 │   ├── db.js               # IndexedDB: черновик тренировки, кэш упражнений
+│   ├── analytics/          # Domain-слой (pure, без DOM)
+│   │   ├── profileMetrics.js
+│   │   ├── bodyWeight.js
+│   │   └── adherence.js
 │   ├── demoMode.js         # Demo API/Auth shim (localStorage)
 │   ├── api.js              # Supabase CRUD
 │   ├── auth.js             # Supabase email/password auth
 │   ├── sync.js             # Экспорт/импорт JSON
+│   ├── onboarding.js       # Первичные данные + вес после тренировки
 │   ├── router.js           # Маршрутизация + init страниц login/home/profile
 │   ├── templates.js        # Шаблоны, редактор, picker упражнений
 │   ├── workout.js          # Старт/активная/завершение тренировки
 │   ├── history.js          # Список и деталь истории
 │   ├── exercises.js        # Просмотр каталога упражнений
 │   ├── calendar.js         # Календарь план/факт
-│   ├── progress.js         # Графики Chart.js
+│   ├── progress.js         # Хаб прогресса + графики Chart.js
 │   ├── demoData.js         # Генерация/очистка тестовых данных
 │   └── updateCheck.js      # Проверка version.json, модалка обновления
 │
@@ -199,7 +204,9 @@ mygym/
 │
 ├── supabase/
 │   ├── schema.sql          # Таблицы + RLS + триггеры
-│   └── seed_exercises.sql
+│   ├── migrations/         # Инкрементальные SQL (existing projects)
+│   ├── seed_exercises.sql
+│   └── README.md
 │
 ├── .github/workflows/
 │   └── android-apk.yml     # Сборка APK + GitHub Release
@@ -239,6 +246,7 @@ mygym/
 10. Если есть незавершённая тренировка → confirm → resume или clear
 
 11. Router.navigate('home')
+12. Onboarding.maybePrompt()   // дата рождения + вес, если ещё не заполнены
 ```
 
 **Важно:** скрипты объявлены как `const Api = …`, `const Auth = …`. Demo-режим **не заменяет** глобальные объекты, а **мутирует их методы** (`DemoMode.activateDemoShims()`), иначе модули продолжат вызывать старые Supabase-методы.
@@ -262,11 +270,16 @@ mygym/
 | `history-detail` | рендер в JS | `HistoryManager.loadHistoryDetail(sessionId)` |
 | `exercises` | рендер в JS | `ExercisesManager.loadExercisesList()` |
 | `calendar` | рендер в JS | `CalendarManager.load()` |
-| `progress` | рендер в JS | `ProgressManager.load()` |
+| `progress` | рендер в JS | `ProgressManager.loadHub()` — категории |
+| `progress-exercises` | рендер в JS | графики по упражнениям |
+| `progress-body-weight` | рендер в JS | график собственного веса |
+| `progress-missed` | рендер в JS | пропуски план/факт |
 
 Нижняя навигация (`#shell-nav`) — постоянная, вне `#app`. Скрывается на `login` через `Utils.hideShellNav()`.
 
-Маршруты привязаны к вкладкам через `Utils.shellNavActiveFor(path)`.
+Маршруты привязаны к вкладкам через `Utils.shellNavActiveFor(path)` (все `progress-*` → вкладка «Прогресс»).
+
+**Профиль:** возраст (из `birth_date`) и текущий вес — только просмотр. Редактирования веса в профиле нет.
 
 ---
 
@@ -279,15 +292,19 @@ mygym/
 
 | Таблица | Назначение | RLS |
 |---------|------------|-----|
-| `profiles` | Профиль пользователя (display_name) | Только свой |
+| `profiles` | Профиль (`display_name`, `birth_date`) | Только свой |
 | `exercises` | Общий каталог упражнений | SELECT для authenticated |
 | `templates` | Шаблоны пользователя | CRUD только свои |
 | `sessions` | Тренировки (в т.ч. черновики в облаке) | CRUD только свои |
 | `planned_workouts` | План на дату (1 день = 1 запись) | CRUD только свои |
+| `body_weight_entries` | История веса тела (1 замер / день) | CRUD только свои |
 
 Триггер `on_auth_user_created` создаёт строку в `profiles` при регистрации.
 
-**Ограничение БД:** уникальный индекс `sessions_one_completed_per_day` — не более одной **завершённой** тренировки на пользователя в день.
+**Ограничение БД:** уникальный индекс `sessions_one_completed_per_day` — не более одной **завершённой** тренировки на пользователя в день.  
+**Вес:** unique `(user_id, measured_on)` — upsert при повторном замере в тот же день.
+
+**Миграция существующих проектов:** выполнить `supabase/migrations/20260727_body_metrics.sql` в SQL Editor.
 
 Клиентский ключ: **только** publishable/anon key в `js/config.js`. Пароль БД в клиент не попадает.
 
@@ -310,9 +327,11 @@ Scope черновика (`getActiveScope()`):
 ### 7.3 localStorage (demo)
 
 Префикс `mygym_demo_`:
-- `templates`, `sessions`, `planned` — массивы записей
+- `templates`, `sessions`, `planned`, `body_weight` — массивы записей
+- `profile` — объект профиля (в т.ч. `birth_date`)
 
 Флаг сессии demo: `sessionStorage.mygym_demo_mode = '1'`
+Skip онбординга на сессию: `sessionStorage.mygym_onboarding_skip:<userId>`
 
 ### 7.4 Каталог упражнений
 
@@ -363,12 +382,13 @@ Scope черновика (`getActiveScope()`):
 - Форматирование дат/времени
 - `escapeHtml`, `generateId`, `debounce`
 - `showToast()` — уведомления
-- `confirm()`, `prompt()`, `confirmPhrase()` — **кастомные модалки** (не системные alert/confirm)
+- `confirm()`, `prompt()`, `confirmPhrase()`, `formModal()` — **кастомные модалки**
 - Управление `#shell-nav`
 
 ### `api.js`
-Все операции с облаком: профиль, шаблоны, сессии, план, прогресс.  
-`normalizeSession()` приводит snake_case БД к camelCase приложения.
+Все операции с облаком: профиль, шаблоны, сессии, план, вес тела, прогресс.  
+`normalizeSession()` / `normalizeBodyWeight()` приводят snake_case БД к camelCase приложения.  
+`birth_date` в профиле **set-once** (повторная смена запрещена на уровне Api).
 
 ### `auth.js`
 `AuthManager`: signUp, signIn, logout, getCurrentUser, init (restore session).
@@ -379,8 +399,21 @@ Scope черновика (`getActiveScope()`):
 ### `demoMode.js`
 `DemoApi`, `DemoAuth`, `activateDemoShims()`.
 
+### `onboarding.js`
+`Onboarding.maybePrompt()` — модалка даты рождения + веса при первом входе (можно «Позже»).  
+`Onboarding.promptBodyWeightAfterWorkout()` — опциональный замер после `finishWorkout`.
+
+### `analytics/*` (domain)
+Чистые функции без DOM:
+- `AnalyticsProfile` — возраст, gaps онбординга
+- `AnalyticsBodyWeight` — нормализация и сводка серии веса
+- `AnalyticsAdherence` — план/факт/пропуски по диапазону дат
+
+Новую аналитику писать **сюда**, UI — тонкая оболочка в `progress.js`.
+
 ### `router.js`
-`AppRouter`: navigate, initLoginPage, initHomePage, initProfilePage.
+`AppRouter`: navigate, initLoginPage, initHomePage, initProfilePage.  
+Маршруты прогресса: `progress` (хаб), `progress-exercises`, `progress-body-weight`, `progress-missed`.
 
 ### `templates.js`
 `TemplatesManager`: CRUD шаблонов, редактор, модальный picker упражнений (фильтры мышца/оборудование).
@@ -391,15 +424,19 @@ Scope черновика (`getActiveScope()`):
 - Старт из шаблона / плана / пустая
 - Активная тренировка: подходы, таймеры, rest timer
 - `persist()` — throttle записи в IndexedDB + cloud
+- После `finishWorkout` — запрос веса через `Onboarding`
 
-### `history.js`, `calendar.js`, `progress.js`, `exercises.js`
-Соответствующие экраны. Progress использует Chart.js.
+### `history.js`, `calendar.js`, `exercises.js`
+Соответствующие экраны. Календарь использует `AnalyticsAdherence.dayStatus` при наличии.
+
+### `progress.js`
+Хаб категорий + экраны графиков (Chart.js). Расчёты веса/пропусков — через `analytics/`.
 
 ### `sync.js`
-`SyncManager`: export JSON, import legacy backup → Supabase.
+`SyncManager`: export JSON (включая `body_weight_entries` и `birth_date`), import legacy backup → Supabase.
 
 ### `demoData.js`
-`DemoData.seed()` / `clearAll()` — тестовый набор (шаблоны, ~13 сессий, планы).
+`DemoData.seed()` / `clearAll()` — тестовый набор (шаблоны, сессии, планы, вес, birth_date).
 
 ### `updateCheck.js`
 См. [раздел 13](#13-система-обновлений).
@@ -479,7 +516,7 @@ Scope черновика (`getActiveScope()`):
 
 ## 12. PWA и Service Worker
 
-Файл: `sw.js`, cache name: `mygym-v2.5.9` (меняется с релизом).
+Файл: `sw.js`, cache name: `mygym-v2.6.0` (меняется с релизом).
 
 ### Стратегии кэширования
 
@@ -508,7 +545,7 @@ Scope черновика (`getActiveScope()`):
 
 ```json
 {
-  "version": "2.5.9",
+  "version": "2.6.0",
   "minVersion": "2.5.0",
   "critical": false,
   "releaseNotes": ["..."],
@@ -602,7 +639,7 @@ Workflow: `.github/workflows/android-apk.yml`
 | `sw.js` | `CACHE_NAME` (`mygym-vX.Y.Z`) |
 | `android/app/build.gradle` | `versionCode`, `versionName` (через `sync-android-version.js`) |
 
-`versionCode` = `major*10000 + minor*100 + patch` (например 2.5.9 → 20509).
+`versionCode` = `major*10000 + minor*100 + patch` (например 2.6.0 → 20600).
 
 Скрипт синхронизации:
 
@@ -709,4 +746,4 @@ node scripts/add-traps.js
 
 ---
 
-*Последнее обновление: v2.5.9*
+*Последнее обновление: v2.6.0*

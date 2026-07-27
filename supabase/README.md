@@ -1,2 +1,5 @@
 -- Optional: allow authenticated users to refresh catalog (not required for app)
 -- Prefer running seed_exercises.sql as project owner / service role in SQL Editor.
+--
+-- Existing projects (upgrade to body metrics / 2.6.0):
+--   also run migrations/20260727_body_metrics.sql

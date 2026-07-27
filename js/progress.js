@@ -5,7 +5,107 @@ class ProgressManager {
   static showAll = false;
   static selectedId = null;
 
+  static destroyChart() {
+    if (this.chart) {
+      this.chart.destroy();
+      this.chart = null;
+    }
+  }
+
+  static formatShortDate(dateStr) {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    return `${d}.${m}`;
+  }
+
+  static formatMonthLabel(ym) {
+    if (!ym) return '';
+    const [y, m] = ym.split('-');
+    const names = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+    const idx = Math.max(0, Math.min(11, (Number(m) || 1) - 1));
+    return `${names[idx]} ${String(y).slice(2)}`;
+  }
+
+  // ── Hub ──────────────────────────────────────────────
+  static async loadHub() {
+    this.destroyChart();
+    const container = document.getElementById('app');
+
+    let weightHint = 'Динамика веса тела';
+    let missedHint = 'План vs факт';
+    try {
+      const latest = await Api.getLatestBodyWeight();
+      if (latest) weightHint = `Сейчас ${latest.weightKg} кг · ${this.formatShortDate(latest.measuredOn)}`;
+      else weightHint = 'Пока нет замеров';
+    } catch { /* offline / missing table */ }
+
+    try {
+      const to = Utils.getTodayStr();
+      const fromDate = new Date();
+      fromDate.setMonth(fromDate.getMonth() - 5);
+      fromDate.setDate(1);
+      const from = Utils.toDateStr(fromDate);
+      const [planned, sessions] = await Promise.all([
+        Api.listPlanned(from, to),
+        Api.listSessions()
+      ]);
+      const summary = AnalyticsAdherence.summarize({ planned, sessions, from, to });
+      missedHint = summary.totals.missed
+        ? `${summary.totals.missed} пропусков за период`
+        : 'Пропусков нет — отличный ритм';
+    } catch { /* ignore */ }
+
+    container.innerHTML = `
+      <div class="app-header fade-in">
+        <h4>Прогресс</h4>
+        <p class="text-muted mb-0 small">Выбери категорию анализа</p>
+      </div>
+      <div class="container fade-in progress-hub">
+        <button type="button" class="progress-hub-item" data-progress="exercises">
+          <div class="progress-hub-icon"><i class="bi bi-bar-chart-line"></i></div>
+          <div class="progress-hub-text">
+            <div class="progress-hub-title">Прогресс тренировок</div>
+            <div class="progress-hub-desc">Макс. вес и объём по упражнениям</div>
+          </div>
+          <i class="bi bi-chevron-right progress-hub-arrow"></i>
+        </button>
+        <button type="button" class="progress-hub-item" data-progress="body-weight">
+          <div class="progress-hub-icon"><i class="bi bi-person-bounding-box"></i></div>
+          <div class="progress-hub-text">
+            <div class="progress-hub-title">Собственный вес</div>
+            <div class="progress-hub-desc">${Utils.escapeHtml(weightHint)}</div>
+          </div>
+          <i class="bi bi-chevron-right progress-hub-arrow"></i>
+        </button>
+        <button type="button" class="progress-hub-item" data-progress="missed">
+          <div class="progress-hub-icon"><i class="bi bi-calendar-x"></i></div>
+          <div class="progress-hub-text">
+            <div class="progress-hub-title">Пропуски</div>
+            <div class="progress-hub-desc">${Utils.escapeHtml(missedHint)}</div>
+          </div>
+          <i class="bi bi-chevron-right progress-hub-arrow"></i>
+        </button>
+      </div>
+    `;
+
+    container.querySelectorAll('[data-progress]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.progress;
+        if (key === 'exercises') Router.navigate('progress-exercises');
+        else if (key === 'body-weight') Router.navigate('progress-body-weight');
+        else if (key === 'missed') Router.navigate('progress-missed');
+      });
+    });
+  }
+
+  // Alias for router
   static async load() {
+    return this.loadHub();
+  }
+
+  // ── Exercises (existing) ─────────────────────────────
+  static async loadExercises() {
+    this.destroyChart();
     const container = document.getElementById('app');
     try {
       const [exercises, templates] = await Promise.all([
@@ -35,8 +135,15 @@ class ProgressManager {
 
     container.innerHTML = `
       <div class="app-header fade-in">
-        <h4>Прогресс</h4>
-        <p class="text-muted mb-0 small">Динамика веса и объёма</p>
+        <div class="d-flex align-items-center">
+          <button class="btn btn-link text-white me-2" onclick="Router.navigate('progress')">
+            <i class="bi bi-arrow-left"></i>
+          </button>
+          <div>
+            <h4 class="mb-0">Прогресс тренировок</h4>
+            <p class="text-muted mb-0 small">Динамика веса и объёма</p>
+          </div>
+        </div>
       </div>
       <div class="container fade-in">
         <div class="card mb-3">
@@ -124,7 +231,11 @@ class ProgressManager {
     }
 
     const q = searchQuery.toLowerCase().trim();
-    if (q) list = list.filter((ex) => ex.name.toLowerCase().includes(q) || (ex.category || '').toLowerCase().includes(q));
+    if (q) {
+      list = list.filter((ex) =>
+        ex.name.toLowerCase().includes(q) || (ex.category || '').toLowerCase().includes(q)
+      );
+    }
     return list;
   }
 
@@ -157,20 +268,14 @@ class ProgressManager {
       btn.addEventListener('click', () => {
         this.selectedId = btn.dataset.id;
         listEl.querySelectorAll('.ex-pick').forEach((b) => b.classList.toggle('active', b === btn));
-        this.renderChart(this.selectedId);
+        this.renderExerciseChart(this.selectedId);
       });
     });
 
-    if (this.selectedId) this.renderChart(this.selectedId);
+    if (this.selectedId) this.renderExerciseChart(this.selectedId);
   }
 
-  static formatShortDate(dateStr) {
-    if (!dateStr) return '';
-    const [y, m, d] = dateStr.split('-');
-    return `${d}.${m}`;
-  }
-
-  static async renderChart(exerciseId) {
+  static async renderExerciseChart(exerciseId) {
     const hint = document.getElementById('progress-hint');
     const nameEl = document.getElementById('chart-ex-name');
     const statsEl = document.getElementById('chart-stats');
@@ -190,10 +295,7 @@ class ProgressManager {
       return;
     }
 
-    if (this.chart) {
-      this.chart.destroy();
-      this.chart = null;
-    }
+    this.destroyChart();
 
     if (!points.length) {
       if (hint) hint.textContent = 'Пока нет завершённых подходов';
@@ -311,6 +413,275 @@ class ProgressManager {
         }
       }
     });
+  }
+
+  // backward-compatible alias
+  static renderChart(exerciseId) {
+    return this.renderExerciseChart(exerciseId);
+  }
+
+  // ── Body weight ──────────────────────────────────────
+  static async loadBodyWeight() {
+    this.destroyChart();
+    const container = document.getElementById('app');
+    container.innerHTML = `
+      <div class="app-header fade-in">
+        <div class="d-flex align-items-center">
+          <button class="btn btn-link text-white me-2" onclick="Router.navigate('progress')">
+            <i class="bi bi-arrow-left"></i>
+          </button>
+          <div>
+            <h4 class="mb-0">Собственный вес</h4>
+            <p class="text-muted mb-0 small">Замеры после тренировок</p>
+          </div>
+        </div>
+      </div>
+      <div class="container fade-in">
+        <div class="card mb-3 chart-card">
+          <div class="card-body">
+            <div class="chart-ex-name" id="bw-title">Загрузка…</div>
+            <p class="text-muted small mb-0" id="bw-hint"></p>
+            <div class="chart-stats" id="bw-stats"></div>
+            <canvas id="bw-chart" height="240"></canvas>
+            <p class="text-muted small mt-3 mb-0" id="bw-empty"></p>
+          </div>
+        </div>
+        <p class="text-muted small px-1">
+          Вес нельзя править в профиле — он записывается при онбординге и после завершения тренировки.
+        </p>
+      </div>
+    `;
+
+    let entries = [];
+    try {
+      entries = await Api.listBodyWeight();
+    } catch (e) {
+      Utils.showToast(e.message || 'Не удалось загрузить вес', 'danger');
+    }
+
+    const summary = AnalyticsBodyWeight.summarize(entries);
+    const title = document.getElementById('bw-title');
+    const hint = document.getElementById('bw-hint');
+    const statsEl = document.getElementById('bw-stats');
+    const empty = document.getElementById('bw-empty');
+    const canvas = document.getElementById('bw-chart');
+
+    if (!summary.count) {
+      if (title) title.textContent = 'Пока нет замеров';
+      if (hint) hint.textContent = '';
+      if (statsEl) statsEl.innerHTML = '';
+      if (empty) {
+        empty.textContent = 'Заверши тренировку и укажи вес — или заполни первичные данные в профиле.';
+      }
+      return;
+    }
+
+    if (title) title.textContent = `${summary.last.weightKg} кг`;
+    if (hint) {
+      hint.textContent = `${summary.count} замеров · с ${this.formatShortDate(summary.first.date)}`;
+    }
+    const delta = summary.delta;
+    const deltaTxt = `${delta >= 0 ? '+' : ''}${delta.toFixed(1)} кг`;
+    if (statsEl) {
+      statsEl.innerHTML = `
+        <div class="chart-stat"><span>Сейчас</span><strong>${summary.last.weightKg} кг</strong></div>
+        <div class="chart-stat"><span>Старт</span><strong>${summary.first.weightKg} кг</strong></div>
+        <div class="chart-stat"><span>Мин</span><strong>${summary.min.weightKg} кг</strong></div>
+        <div class="chart-stat"><span>Динамика</span><strong class="${delta <= 0 ? 'up' : 'down'}">${deltaTxt}</strong></div>
+      `;
+    }
+    if (empty) empty.textContent = '';
+
+    this.chart = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: summary.points.map((p) => this.formatShortDate(p.date)),
+        datasets: [{
+          label: 'Вес, кг',
+          data: summary.points.map((p) => p.weightKg),
+          borderColor: '#5ec8ff',
+          backgroundColor: (ctx) => {
+            const chart = ctx.chart;
+            const { ctx: c, chartArea } = chart;
+            if (!chartArea) return 'rgba(94,200,255,0.15)';
+            const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            g.addColorStop(0, 'rgba(94,200,255,0.35)');
+            g.addColorStop(1, 'rgba(94,200,255,0.02)');
+            return g;
+          },
+          fill: true,
+          tension: 0.35,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#5ec8ff',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(12,16,24,0.95)',
+            callbacks: {
+              label(ctx) { return ` ${ctx.parsed.y} кг`; }
+            }
+          }
+        },
+        scales: {
+          y: {
+            ticks: { color: '#9aa3b5' },
+            grid: { color: 'rgba(255,255,255,0.06)' },
+            beginAtZero: false
+          },
+          x: {
+            ticks: { color: '#9aa3b5', maxRotation: 0 },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+
+  // ── Missed / adherence ───────────────────────────────
+  static async loadMissed() {
+    this.destroyChart();
+    const container = document.getElementById('app');
+    container.innerHTML = `
+      <div class="app-header fade-in">
+        <div class="d-flex align-items-center">
+          <button class="btn btn-link text-white me-2" onclick="Router.navigate('progress')">
+            <i class="bi bi-arrow-left"></i>
+          </button>
+          <div>
+            <h4 class="mb-0">Пропуски</h4>
+            <p class="text-muted mb-0 small">План без тренировки</p>
+          </div>
+        </div>
+      </div>
+      <div class="container fade-in">
+        <div class="card mb-3 chart-card">
+          <div class="card-body">
+            <div class="chart-ex-name" id="miss-title">Загрузка…</div>
+            <p class="text-muted small mb-0" id="miss-hint"></p>
+            <div class="chart-stats" id="miss-stats"></div>
+            <canvas id="miss-chart" height="220"></canvas>
+          </div>
+        </div>
+        <div class="card mb-3">
+          <div class="card-header"><h6 class="mb-0">Недавние пропуски</h6></div>
+          <div class="card-body" id="miss-list"></div>
+        </div>
+      </div>
+    `;
+
+    const to = Utils.getTodayStr();
+    const fromDate = new Date();
+    fromDate.setMonth(fromDate.getMonth() - 5);
+    fromDate.setDate(1);
+    const from = Utils.toDateStr(fromDate);
+
+    let planned = [];
+    let sessions = [];
+    try {
+      [planned, sessions] = await Promise.all([
+        Api.listPlanned(from, to),
+        Api.listSessions()
+      ]);
+    } catch (e) {
+      Utils.showToast(e.message || 'Нет данных', 'warning');
+    }
+
+    const summary = AnalyticsAdherence.summarize({ planned, sessions, from, to });
+    const title = document.getElementById('miss-title');
+    const hint = document.getElementById('miss-hint');
+    const statsEl = document.getElementById('miss-stats');
+    const listEl = document.getElementById('miss-list');
+    const canvas = document.getElementById('miss-chart');
+
+      const rate = summary.totals.planned
+      ? Math.round(((summary.totals.planned - summary.totals.missed) / summary.totals.planned) * 100)
+      : null;
+
+    if (title) {
+      title.textContent = summary.totals.missed
+        ? `${summary.totals.missed} пропусков`
+        : 'Пропусков нет';
+    }
+    if (hint) {
+      hint.textContent = rate != null
+        ? `Выполнение плана ~${rate}% · ${from.slice(0, 7)} → ${to.slice(0, 7)}`
+        : 'Пока нет планов в календаре';
+    }
+    if (statsEl) {
+      statsEl.innerHTML = `
+        <div class="chart-stat"><span>План</span><strong>${summary.totals.planned}</strong></div>
+        <div class="chart-stat"><span>Сделано</span><strong>${summary.totals.completed}</strong></div>
+        <div class="chart-stat"><span>Пропуски</span><strong class="${summary.totals.missed ? 'down' : 'up'}">${summary.totals.missed}</strong></div>
+        <div class="chart-stat"><span>%</span><strong>${rate != null ? rate + '%' : '—'}</strong></div>
+      `;
+    }
+
+    const months = summary.byMonth.filter((m) => m.planned > 0 || m.completed > 0 || m.missed > 0);
+    this.chart = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: months.map((m) => this.formatMonthLabel(m.month)),
+        datasets: [
+          {
+            label: 'Сделано',
+            data: months.map((m) => m.completed),
+            backgroundColor: 'rgba(61, 220, 151, 0.55)',
+            borderRadius: 6
+          },
+          {
+            label: 'Пропуски',
+            data: months.map((m) => m.missed),
+            backgroundColor: 'rgba(255, 90, 106, 0.55)',
+            borderRadius: 6
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: {
+            labels: { color: '#e8ecf4', usePointStyle: true, boxWidth: 8 }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { color: '#9aa3b5', stepSize: 1 },
+            grid: { color: 'rgba(255,255,255,0.06)' }
+          },
+          x: {
+            ticks: { color: '#9aa3b5' },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+
+    const recent = summary.missedDates.slice().reverse().slice(0, 12);
+    if (!listEl) return;
+    if (!recent.length) {
+      listEl.innerHTML = '<p class="text-muted mb-0 small">За выбранный период пропусков нет.</p>';
+      return;
+    }
+    listEl.innerHTML = recent.map((d) => `
+      <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary border-opacity-25">
+        <div>
+          <div class="fw-semibold">${Utils.formatDate(d)}</div>
+          <div class="small text-muted">${Utils.getDayOfWeek(d)}</div>
+        </div>
+        <span class="badge bg-danger-subtle text-danger">пропуск</span>
+      </div>
+    `).join('');
   }
 }
 

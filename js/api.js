@@ -21,18 +21,119 @@ const Api = {
       .eq('id', user.id)
       .maybeSingle();
     if (error) throw error;
-    return data || { id: user.id, display_name: user.email, created_at: null };
+    return data || {
+      id: user.id,
+      display_name: user.email,
+      birth_date: null,
+      created_at: null
+    };
   },
 
-  async updateProfile(displayName) {
+  /**
+   * @param {string|{displayName?: string, birthDate?: string|null}} patch
+   * birthDate can only be set when currently empty (immutable afterwards).
+   */
+  async updateProfile(patch) {
     const user = await this.requireUser();
+    const current = await this.getProfile();
+    const payload = { id: user.id };
+
+    if (typeof patch === 'string') {
+      payload.display_name = patch;
+    } else if (patch && typeof patch === 'object') {
+      if (patch.displayName != null) payload.display_name = patch.displayName;
+      if (patch.birthDate !== undefined && patch.birthDate !== null && patch.birthDate !== '') {
+        if (current.birth_date && current.birth_date !== patch.birthDate) {
+          throw new Error('Дата рождения уже задана и не меняется');
+        }
+        if (!current.birth_date) payload.birth_date = String(patch.birthDate).slice(0, 10);
+      }
+    }
+
+    if (payload.display_name == null) {
+      payload.display_name = current.display_name || user.email || '';
+    }
+
     const { data, error } = await this.client()
       .from('profiles')
-      .upsert({ id: user.id, display_name: displayName })
+      .upsert(payload)
       .select()
       .single();
     if (error) throw error;
     return data;
+  },
+
+  normalizeBodyWeight(row) {
+    if (!row) return null;
+    return {
+      id: row.id,
+      userId: row.user_id,
+      weightKg: Number(row.weight_kg),
+      measuredOn: row.measured_on,
+      sessionId: row.session_id || null,
+      source: row.source || 'workout_end',
+      createdAt: row.created_at
+    };
+  },
+
+  async listBodyWeight() {
+    const user = await this.requireUser();
+    const { data, error } = await this.client()
+      .from('body_weight_entries')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('measured_on', { ascending: true });
+    if (error) throw error;
+    return (data || []).map((r) => this.normalizeBodyWeight(r));
+  },
+
+  async getLatestBodyWeight() {
+    const user = await this.requireUser();
+    const { data, error } = await this.client()
+      .from('body_weight_entries')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('measured_on', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return this.normalizeBodyWeight(data);
+  },
+
+  /**
+   * Upsert one entry per calendar day.
+   * @param {{ weightKg: number, measuredOn?: string, sessionId?: string|null, source?: string }} entry
+   */
+  async upsertBodyWeight(entry) {
+    const user = await this.requireUser();
+    const weightKg = Number(entry.weightKg);
+    if (!Number.isFinite(weightKg) || weightKg <= 0 || weightKg >= 500) {
+      throw new Error('Укажи вес от 1 до 499 кг');
+    }
+    const measuredOn = entry.measuredOn || Utils.getTodayStr();
+    const source = entry.source === 'onboarding' ? 'onboarding' : 'workout_end';
+    const row = {
+      user_id: user.id,
+      weight_kg: Math.round(weightKg * 100) / 100,
+      measured_on: measuredOn,
+      session_id: entry.sessionId || null,
+      source
+    };
+    const { data, error } = await this.client()
+      .from('body_weight_entries')
+      .upsert(row, { onConflict: 'user_id,measured_on' })
+      .select()
+      .single();
+    if (error) throw error;
+    return this.normalizeBodyWeight(data);
+  },
+
+  async deleteBodyWeight(id) {
+    const { error } = await this.client()
+      .from('body_weight_entries')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 
   async listExercises() {
