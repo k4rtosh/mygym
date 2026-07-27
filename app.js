@@ -55,6 +55,16 @@ async function initNativeShell() {
   } catch (_) { /* optional */ }
 }
 
+function showDemoBadge() {
+  if (document.getElementById('demo-badge')) return;
+  const badge = document.createElement('div');
+  badge.id = 'demo-badge';
+  badge.textContent = 'DEMO';
+  badge.style.cssText = 'position:fixed;top:8px;right:8px;z-index:9999;background:#f59e0b;color:#000;font-size:0.65rem;font-weight:800;padding:2px 8px;border-radius:6px;letter-spacing:0.5px;pointer-events:none;';
+  document.body.appendChild(badge);
+}
+window.showDemoBadge = showDemoBadge;
+
 window.APP_VERSION = APP_VERSION;
 window.clearCacheAndReload = clearCacheAndReload;
 window.exportData = () => SyncManager.exportData();
@@ -73,12 +83,20 @@ async function initApp() {
     await initNativeShell();
     await DB.init();
 
+    if (window.DemoMode && window.DemoMode.isDemo()) {
+      window.DemoMode.activateDemoShims();
+    }
+
     const draft = await DB.loadActiveSession();
     const loggedIn = await Auth.init();
 
     if (!loggedIn) {
       await Router.navigate('login');
       return;
+    }
+
+    if (window.DemoMode && window.DemoMode.isDemo()) {
+      showDemoBadge();
     }
 
     try {
