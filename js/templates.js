@@ -83,7 +83,10 @@ class TemplatesManager {
   }
 
   static async createNew() {
-    const name = window.prompt('Название шаблона', 'Новый шаблон');
+    const name = await Utils.prompt('Название шаблона', 'Новый шаблон', {
+      title: 'Новый шаблон',
+      placeholder: 'Например: День груди'
+    });
     if (name === null) return;
     try {
       const t = await Api.createTemplate({
@@ -448,7 +451,11 @@ class TemplatesManager {
   }
 
   static async deleteTemplate(templateId) {
-    if (!(await Utils.confirm('Удалить шаблон?'))) return;
+    if (!(await Utils.confirm('Удалить шаблон?', {
+      title: 'Удалить шаблон',
+      confirmText: 'Удалить',
+      confirmClass: 'btn-danger'
+    }))) return;
     try {
       await Api.deleteTemplate(templateId);
       Utils.showToast('Шаблон удалён');

@@ -1,11 +1,11 @@
 {
-  "version": "2.5.7",
+  "version": "2.5.8",
   "minVersion": "2.5.0",
   "critical": false,
   "releaseNotes": [
-    "Кнопка «Обновить приложение» в профиле при наличии новой версии",
-    "После «Позже» напоминание через 24 часа",
-    "Web — обновление кэша, APK — скачивание новой сборки"
+    "Кастомные диалоги подтверждения и ввода в стиле приложения",
+    "Заменены системные alert/confirm/prompt на тёмные модалки",
+    "Улучшены подписи кнопок для удаления и завершения тренировки"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"

@@ -345,7 +345,7 @@ class AppRouter {
     });
 
     document.getElementById('logout-btn')?.addEventListener('click', async () => {
-      if (!(await Utils.confirm('Выйти?'))) return;
+      if (!(await Utils.confirm('Выйти из аккаунта?', { title: 'Выход', confirmText: 'Выйти' }))) return;
       await Auth.logout();
       Router.navigate('login');
     });

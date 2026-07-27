@@ -71,7 +71,8 @@ class SyncManager {
         `Импортировать в облако?\n\n` +
         `Тренировок: ${data.sessions ? data.sessions.length : 0}\n` +
         `Шаблонов: ${data.templates ? data.templates.length : 0}\n\n` +
-        `Существующие данные не удаляются — записи добавляются/обновляются.`
+        `Существующие данные не удаляются — записи добавляются/обновляются.`,
+        { title: 'Импорт данных', confirmText: 'Импортировать' }
       );
       if (!confirmed) return;
 
