@@ -56,30 +56,14 @@ async function initNativeShell() {
 }
 
 function showDemoBadge() {
-  let badge = document.getElementById('demo-badge');
-  if (!badge) {
-    badge = document.createElement('span');
-    badge.id = 'demo-badge';
-    badge.className = 'demo-mode-badge';
-    badge.textContent = 'DEMO';
-  }
-  const host = document.querySelector('#app .app-header .d-flex');
-  if (host) {
-    badge.classList.remove('demo-mode-badge-floating');
-    if (!host.contains(badge)) {
-      if (host.children.length >= 2) {
-        host.insertBefore(badge, host.lastElementChild);
-      } else {
-        host.appendChild(badge);
-      }
-    }
-    return;
-  }
-  const nav = document.getElementById('shell-nav');
-  if (!nav) return;
-  badge.classList.add('demo-mode-badge-floating');
-  badge.textContent = 'DEMO';
-  if (!document.body.contains(badge)) document.body.appendChild(badge);
+  document.body.classList.add('is-demo-mode');
+  if (document.getElementById('demo-mode-strip')) return;
+  const strip = document.createElement('div');
+  strip.id = 'demo-mode-strip';
+  strip.className = 'demo-mode-strip';
+  strip.setAttribute('aria-hidden', 'true');
+  strip.textContent = 'DEMO · локальные данные';
+  document.body.prepend(strip);
 }
 window.showDemoBadge = showDemoBadge;
 

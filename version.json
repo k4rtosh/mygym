@@ -3,9 +3,9 @@
   "minVersion": "2.5.0",
   "critical": false,
   "releaseNotes": [
-    "DEMO-плашка встроена в шапку и больше не перекрывает кнопки",
-    "Улучшено позиционирование индикатора демо-режима на всех экранах",
-    "Исправлены мелкие проблемы отображения в верхней области экрана"
+    "DEMO-полоска под статус-баром — не перекрывает кнопки",
+    "Единая подпись debug APK — обновление поверх старой версии",
+    "Синхронизация versionCode Android с version.json"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"

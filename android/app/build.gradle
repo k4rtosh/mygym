@@ -1,5 +1,11 @@
 apply plugin: 'com.android.application'
 
+def debugKeystorePropsFile = rootProject.file("keystore.debug.properties")
+def debugKeystoreProps = new Properties()
+if (debugKeystorePropsFile.exists()) {
+    debugKeystoreProps.load(new FileInputStream(debugKeystorePropsFile))
+}
+
 android {
     namespace "com.k4rtosh.mygym"
     compileSdk rootProject.ext.compileSdkVersion
@@ -7,8 +13,8 @@ android {
         applicationId "com.k4rtosh.mygym"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 251
-        versionName "2.5.1"
+        versionCode 20506
+        versionName "2.5.6"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,7 +22,20 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        debug {
+            if (debugKeystorePropsFile.exists()) {
+                storeFile rootProject.file(debugKeystoreProps['storeFile'])
+                storePassword debugKeystoreProps['storePassword']
+                keyAlias debugKeystoreProps['keyAlias']
+                keyPassword debugKeystoreProps['keyPassword']
+            }
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
