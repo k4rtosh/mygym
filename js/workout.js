@@ -15,7 +15,8 @@ class WorkoutManager {
 
     const resume = await Utils.confirm(
       `Есть незавершённая тренировка «${draft.templateName || 'Тренировка'}».\n\n` +
-      `ОК — вернуться к ней\nОтмена — другое действие`
+      `Продолжить её или выбрать другое действие?`,
+      { title: 'Тренировка в процессе', confirmText: 'Продолжить', cancelText: 'Другое' }
     );
     if (resume) {
       Router.navigate('active-workout', { sessionId: draft.id });
@@ -23,7 +24,8 @@ class WorkoutManager {
     }
 
     const discard = await Utils.confirm(
-      'Отменить незавершённую тренировку и начать новую?\nЧерновик будет удалён.'
+      'Отменить незавершённую тренировку и начать новую?\nЧерновик будет удалён.',
+      { title: 'Отменить черновик', confirmText: 'Отменить', confirmClass: 'btn-danger', cancelText: 'Назад' }
     );
     if (!discard) return 'abort';
 
@@ -66,7 +68,11 @@ class WorkoutManager {
         </div>
       `;
       document.getElementById('discard-draft-btn')?.addEventListener('click', async () => {
-        if (!(await Utils.confirm('Удалить незавершённую тренировку?'))) return;
+        if (!(await Utils.confirm('Удалить незавершённую тренировку?', {
+          title: 'Удалить черновик',
+          confirmText: 'Удалить',
+          confirmClass: 'btn-danger'
+        }))) return;
         await DB.clearActiveSession();
         try { await Api.deleteSession(draft.id); } catch (_) {}
         Utils.showToast('Черновик удалён');
@@ -554,7 +560,11 @@ class WorkoutManager {
   }
 
   static async finishWorkout() {
-    if (!(await Utils.confirm('Завершить тренировку?'))) return;
+    if (!(await Utils.confirm('Завершить тренировку?', {
+      title: 'Завершить тренировку',
+      confirmText: 'Завершить',
+      confirmClass: 'btn-success'
+    }))) return;
     this.stopTimer();
     this.stopRestTimer();
     (this.currentSession.exercises || []).forEach((ex, index) => {

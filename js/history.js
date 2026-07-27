@@ -139,7 +139,11 @@ class HistoryManager {
   }
 
   static async deleteSession(sessionId) {
-    if (!(await Utils.confirm('Удалить тренировку?'))) return;
+    if (!(await Utils.confirm('Удалить тренировку?', {
+      title: 'Удалить тренировку',
+      confirmText: 'Удалить',
+      confirmClass: 'btn-danger'
+    }))) return;
     try {
       await Api.deleteSession(sessionId);
       Utils.showToast('Удалено');

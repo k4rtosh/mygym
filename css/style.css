@@ -901,3 +901,60 @@ small { color: var(--text-muted); }
 #update-modal .modal-backdrop {
   z-index: 10040;
 }
+
+/* App-styled dialogs (confirm / prompt) */
+.app-dialog .modal-content {
+  border-radius: 18px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
+}
+
+.app-dialog .modal-title {
+  font-family: 'Sora', 'Manrope', sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.app-dialog-message {
+  color: var(--text-color);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.app-dialog .form-control {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--stroke);
+  color: #fff;
+}
+
+.app-dialog .form-control:focus {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 90, 106, 0.5);
+  box-shadow: 0 0 0 0.2rem rgba(255, 90, 106, 0.15);
+  color: #fff;
+}
+
+.app-dialog .form-control.is-invalid {
+  border-color: #dc3545;
+}
+
+.toast-container-app {
+  position: fixed;
+  top: calc(var(--safe-top) + 12px);
+  right: 12px;
+  left: 12px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+
+body.is-demo-mode .toast-container-app {
+  top: calc(var(--safe-top) + 42px);
+}
+
+.toast-container-app .alert {
+  pointer-events: auto;
+  max-width: 100%;
+}

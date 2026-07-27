@@ -82,7 +82,7 @@ const Utils = {
     if (!toastContainer) {
       toastContainer = document.createElement('div');
       toastContainer.id = 'toast-container';
-      toastContainer.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;';
+      toastContainer.className = 'toast-container-app';
       document.body.appendChild(toastContainer);
     }
 
@@ -98,46 +98,176 @@ const Utils = {
     }, 3000);
   },
 
-  async confirm(message) {
-    return window.confirm(message);
+  formatDialogMessage(message) {
+    return this.escapeHtml(message).replace(/\n/g, '<br>');
+  },
+
+  _createAppDialog({ id, title, bodyHtml, footerHtml, titleClass = '' }) {
+    document.getElementById(id)?.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'modal fade app-dialog';
+    modal.id = id;
+    modal.tabIndex = -1;
+    modal.innerHTML = `
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light border-secondary">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title ${titleClass}">${this.escapeHtml(title)}</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+          </div>
+          <div class="modal-body">${bodyHtml}</div>
+          ${footerHtml ? `<div class="modal-footer border-secondary flex-wrap gap-2">${footerHtml}</div>` : ''}
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    return { modal, bsModal };
   },
 
   /**
-   * Модальное подтверждение опасного действия — нужно ввести точную фразу.
+   * @param {string} message
+   * @param {object} [options]
    * @returns {Promise<boolean>}
    */
-  confirmPhrase({ title, message, phrase }) {
+  confirm(message, options = {}) {
+    const {
+      title = 'Подтверждение',
+      confirmText = 'ОК',
+      cancelText = 'Отмена',
+      confirmClass = 'btn-primary'
+    } = options;
+
     return new Promise((resolve) => {
-      const modalId = 'confirm-phrase-modal';
-      document.getElementById(modalId)?.remove();
+      let settled = false;
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        resolve(result);
+      };
 
-      const modal = document.createElement('div');
-      modal.className = 'modal fade';
-      modal.id = modalId;
-      modal.tabIndex = -1;
-      modal.innerHTML = `
-        <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content bg-dark text-light border-secondary">
-            <div class="modal-header border-secondary">
-              <h5 class="modal-title text-danger">${this.escapeHtml(title)}</h5>
-              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-              <p class="mb-3">${this.escapeHtml(message)}</p>
-              <p class="small text-muted mb-2">Для подтверждения введите: <strong class="text-warning">${this.escapeHtml(phrase)}</strong></p>
-              <input type="text" class="form-control form-control-lg" id="confirm-phrase-input" autocomplete="off" spellcheck="false" placeholder="${this.escapeHtml(phrase)}">
-              <div class="text-danger small mt-2 d-none" id="confirm-phrase-error">Фраза введена неверно</div>
-            </div>
-            <div class="modal-footer border-secondary">
-              <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Отмена</button>
-              <button type="button" class="btn btn-danger" id="confirm-phrase-submit" disabled>Очистить данные</button>
-            </div>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(modal);
+      const { modal, bsModal } = this._createAppDialog({
+        id: 'app-confirm-modal',
+        title,
+        bodyHtml: `<p class="mb-0 app-dialog-message">${this.formatDialogMessage(message)}</p>`,
+        footerHtml: `
+          <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">${this.escapeHtml(cancelText)}</button>
+          <button type="button" class="btn ${confirmClass}" id="app-confirm-ok">${this.escapeHtml(confirmText)}</button>
+        `
+      });
 
-      const bsModal = new bootstrap.Modal(modal);
+      modal.querySelector('#app-confirm-ok')?.addEventListener('click', () => {
+        bsModal.hide();
+        finish(true);
+      });
+      modal.addEventListener('hidden.bs.modal', () => {
+        modal.remove();
+        finish(false);
+      });
+      bsModal.show();
+    });
+  },
+
+  /**
+   * @param {string} label
+   * @param {string} [defaultValue]
+   * @param {object} [options]
+   * @returns {Promise<string|null>}
+   */
+  prompt(label, defaultValue = '', options = {}) {
+    const {
+      title = label,
+      placeholder = '',
+      confirmText = 'Сохранить',
+      cancelText = 'Отмена',
+      required = true
+    } = options;
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        resolve(result);
+      };
+
+      const { modal, bsModal } = this._createAppDialog({
+        id: 'app-prompt-modal',
+        title,
+        bodyHtml: `
+          <label class="form-label" for="app-prompt-input">${this.escapeHtml(label)}</label>
+          <input type="text" class="form-control form-control-lg" id="app-prompt-input"
+            value="${this.escapeHtml(defaultValue)}"
+            placeholder="${this.escapeHtml(placeholder)}"
+            autocomplete="off" spellcheck="false">
+        `,
+        footerHtml: `
+          <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">${this.escapeHtml(cancelText)}</button>
+          <button type="button" class="btn btn-primary" id="app-prompt-ok">${this.escapeHtml(confirmText)}</button>
+        `
+      });
+
+      const input = modal.querySelector('#app-prompt-input');
+      const submit = () => {
+        const value = input.value.trim();
+        if (required && !value) {
+          input.classList.add('is-invalid');
+          input.focus();
+          return;
+        }
+        bsModal.hide();
+        finish(value || defaultValue || '');
+      };
+
+      input.addEventListener('input', () => input.classList.remove('is-invalid'));
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submit();
+        }
+      });
+      modal.querySelector('#app-prompt-ok')?.addEventListener('click', submit);
+      modal.addEventListener('shown.bs.modal', () => {
+        input.focus();
+        input.select();
+      });
+      modal.addEventListener('hidden.bs.modal', () => {
+        modal.remove();
+        finish(null);
+      });
+      bsModal.show();
+    });
+  },
+
+  /**
+   * @returns {Promise<boolean>}
+   */
+  confirmPhrase({ title, message, phrase, confirmText = 'Очистить данные' }) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        resolve(result);
+      };
+
+      const { modal, bsModal } = this._createAppDialog({
+        id: 'confirm-phrase-modal',
+        title,
+        titleClass: 'text-danger',
+        bodyHtml: `
+          <p class="mb-3 app-dialog-message">${this.formatDialogMessage(message)}</p>
+          <p class="small text-muted mb-2">Для подтверждения введите: <strong class="text-warning">${this.escapeHtml(phrase)}</strong></p>
+          <input type="text" class="form-control form-control-lg" id="confirm-phrase-input" autocomplete="off" spellcheck="false" placeholder="${this.escapeHtml(phrase)}">
+          <div class="text-danger small mt-2 d-none" id="confirm-phrase-error">Фраза введена неверно</div>
+        `,
+        footerHtml: `
+          <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Отмена</button>
+          <button type="button" class="btn btn-danger" id="confirm-phrase-submit" disabled>${this.escapeHtml(confirmText)}</button>
+        `
+      });
+
       const input = modal.querySelector('#confirm-phrase-input');
       const submitBtn = modal.querySelector('#confirm-phrase-submit');
       const errorEl = modal.querySelector('#confirm-phrase-error');
@@ -148,14 +278,10 @@ const Utils = {
         errorEl.classList.toggle('d-none', !input.value.trim() || ok);
       };
 
-      let settled = false;
-      const finish = (result) => {
-        if (settled) return;
-        settled = true;
-        resolve(result);
-      };
-
       input.addEventListener('input', check);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !submitBtn.disabled) submitBtn.click();
+      });
       modal.addEventListener('shown.bs.modal', () => input.focus());
 
       submitBtn.addEventListener('click', () => {

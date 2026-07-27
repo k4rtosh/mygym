@@ -115,7 +115,10 @@ async function initApp() {
     }
 
     if (draft && draft.id && !draft.endTime) {
-      const resume = await Utils.confirm('Есть незавершённая тренировка. Продолжить?');
+      const resume = await Utils.confirm('Есть незавершённая тренировка. Продолжить?', {
+        title: 'Продолжить тренировку',
+        confirmText: 'Продолжить'
+      });
       if (resume) {
         await Router.navigate('active-workout', { sessionId: draft.id });
         return;
