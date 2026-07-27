@@ -83,6 +83,11 @@ async function initApp() {
     await initNativeShell();
     await DB.init();
 
+    // Проверка обновлений (не блокирует запуск)
+    if (window.UpdateCheck) {
+      UpdateCheck.check().catch(() => {});
+    }
+
     if (window.DemoMode && window.DemoMode.isDemo()) {
       window.DemoMode.activateDemoShims();
     }
