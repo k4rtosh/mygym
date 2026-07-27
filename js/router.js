@@ -295,6 +295,12 @@ class AppRouter {
     document.querySelectorAll('#app-version-display, #update-version-display, #footer-version-display')
       .forEach((el) => { if (el) el.textContent = version; });
 
+    const footerNote = document.querySelector('#profile-footer-note');
+    if (footerNote) {
+      const isDemo = window.DemoMode?.isDemo?.();
+      footerNote.textContent = isDemo ? 'данные хранятся локально' : 'данные в Supabase';
+    }
+
     document.getElementById('export-data-btn')?.addEventListener('click', () => SyncManager.exportData());
     document.getElementById('import-data-btn')?.addEventListener('click', () => {
       const input = document.createElement('input');
@@ -322,28 +328,17 @@ class AppRouter {
       if (window.clearCacheAndReload) window.clearCacheAndReload();
     });
 
-    document.getElementById('seed-demo-btn')?.addEventListener('click', async () => {
-      if (!(await Utils.confirm(
-        'Заполнить тестовыми данными?\n\nТекущие шаблоны, тренировки и планы профиля будут удалены и заменены демо-набором.'
-      ))) return;
-      try {
-        Utils.showToast('Заполняю демо...', 'info');
-        const res = await DemoData.seed();
-        Utils.showToast(`Готово: ${res.templates} шаблона, ${res.sessions} тренировок`);
-        Router.navigate('progress');
-      } catch (e) {
-        Utils.showToast(e.message || 'Ошибка демо', 'danger');
-      }
-    });
-
     document.getElementById('clear-data-btn')?.addEventListener('click', async () => {
-      if (!(await Utils.confirm(
-        'Очистить все данные профиля?\nШаблоны, тренировки и планы будут удалены безвозвратно.'
-      ))) return;
+      const confirmed = await Utils.confirmPhrase({
+        title: 'Очистить все данные?',
+        message: 'Будут удалены все шаблоны, тренировки и планы. Восстановить данные будет невозможно.',
+        phrase: 'ОЧИСТКА'
+      });
+      if (!confirmed) return;
       try {
         Utils.showToast('Очищаю...', 'info');
         await DemoData.clearAll();
-        Utils.showToast('Данные профиля очищены');
+        Utils.showToast('Данные очищены');
         Router.navigate('home');
       } catch (e) {
         Utils.showToast(e.message || 'Ошибка очистки', 'danger');

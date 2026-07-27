@@ -102,6 +102,80 @@ const Utils = {
     return window.confirm(message);
   },
 
+  /**
+   * Модальное подтверждение опасного действия — нужно ввести точную фразу.
+   * @returns {Promise<boolean>}
+   */
+  confirmPhrase({ title, message, phrase }) {
+    return new Promise((resolve) => {
+      const modalId = 'confirm-phrase-modal';
+      document.getElementById(modalId)?.remove();
+
+      const modal = document.createElement('div');
+      modal.className = 'modal fade';
+      modal.id = modalId;
+      modal.tabIndex = -1;
+      modal.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content bg-dark text-light border-secondary">
+            <div class="modal-header border-secondary">
+              <h5 class="modal-title text-danger">${this.escapeHtml(title)}</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <p class="mb-3">${this.escapeHtml(message)}</p>
+              <p class="small text-muted mb-2">Для подтверждения введите: <strong class="text-warning">${this.escapeHtml(phrase)}</strong></p>
+              <input type="text" class="form-control form-control-lg" id="confirm-phrase-input" autocomplete="off" spellcheck="false" placeholder="${this.escapeHtml(phrase)}">
+              <div class="text-danger small mt-2 d-none" id="confirm-phrase-error">Фраза введена неверно</div>
+            </div>
+            <div class="modal-footer border-secondary">
+              <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Отмена</button>
+              <button type="button" class="btn btn-danger" id="confirm-phrase-submit" disabled>Очистить данные</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const bsModal = new bootstrap.Modal(modal);
+      const input = modal.querySelector('#confirm-phrase-input');
+      const submitBtn = modal.querySelector('#confirm-phrase-submit');
+      const errorEl = modal.querySelector('#confirm-phrase-error');
+
+      const check = () => {
+        const ok = input.value.trim() === phrase;
+        submitBtn.disabled = !ok;
+        errorEl.classList.toggle('d-none', !input.value.trim() || ok);
+      };
+
+      let settled = false;
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        resolve(result);
+      };
+
+      input.addEventListener('input', check);
+      modal.addEventListener('shown.bs.modal', () => input.focus());
+
+      submitBtn.addEventListener('click', () => {
+        if (input.value.trim() !== phrase) {
+          errorEl.classList.remove('d-none');
+          return;
+        }
+        bsModal.hide();
+        finish(true);
+      });
+
+      modal.addEventListener('hidden.bs.modal', () => {
+        modal.remove();
+        finish(false);
+      });
+
+      bsModal.show();
+    });
+  },
+
   navItems() {
     return [
       { id: 'home', icon: 'bi-house', label: 'Главная' },

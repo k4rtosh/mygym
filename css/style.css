@@ -842,3 +842,11 @@ small { color: var(--text-muted); }
 .modal .modal-footer {
   padding-bottom: calc(0.75rem + var(--safe-bottom));
 }
+
+.profile-danger-zone {
+  border-color: rgba(220, 53, 69, 0.35);
+}
+
+.profile-danger-zone .card-header {
+  background: rgba(220, 53, 69, 0.08);
+}
