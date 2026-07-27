@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mygym-v2.5.1';
+const CACHE_NAME = 'mygym-v2.5.4';
 
 function detectSwBasePath() {
   try {
@@ -33,6 +33,7 @@ const APP_SHELL = [
   shell('/js/calendar.js'),
   shell('/js/progress.js'),
   shell('/js/demoData.js'),
+  shell('/js/updateCheck.js'),
   shell('/pages/home.html'),
   shell('/pages/login.html'),
   shell('/pages/profile.html'),
@@ -65,6 +66,7 @@ function isNetworkFirst(url) {
   if (host.includes('supabase.co')) return true;
   if (host.includes('jsdelivr.net')) return true;
   if (url.pathname.includes('/data/')) return true;
+  if (url.pathname.endsWith('version.json')) return true;
   return false;
 }
 

@@ -14,6 +14,7 @@ on:
       - 'index.html'
       - 'app.js'
       - 'sw.js'
+      - 'version.json'
       - 'manifest.json'
       - 'capacitor.config.json'
       - 'package.json'
@@ -60,21 +61,31 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
 
+      - name: Read app version
+        id: ver
+        run: echo "version=$(node -p "require('./version.json').version")" >> "$GITHUB_OUTPUT"
+
       - name: Stage APK
         id: stage
         run: |
           SRC="android/app/build/outputs/apk/debug/app-debug.apk"
           test -f "$SRC"
-          DEST="MyGym-2.5.1-debug-${{ github.run_number }}.apk"
+          VER="${{ steps.ver.outputs.version }}"
+          DEST="MyGym-${VER}-debug.apk"
+          LATEST="MyGym-latest-debug.apk"
           cp "$SRC" "$DEST"
+          cp "$SRC" "$LATEST"
           echo "apk=$DEST" >> "$GITHUB_OUTPUT"
-          ls -lh "$DEST"
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          ls -lh "$DEST" "$LATEST"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: mygym-android-apk
-          path: ${{ steps.stage.outputs.apk }}
+          path: |
+            ${{ steps.stage.outputs.apk }}
+            ${{ steps.stage.outputs.latest }}
           if-no-files-found: error
           retention-days: 30
 
@@ -82,18 +93,23 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: apk-build-${{ github.run_number }}
-          name: MyGym Android ${{ github.run_number }}
+          tag_name: apk-v${{ steps.ver.outputs.version }}-${{ github.run_number }}
+          name: MyGym Android v${{ steps.ver.outputs.version }} (${{ github.run_number }})
           body: |
-            Debug APK для установки на телефон (пет-проект).
+            Debug APK для установки на телефон.
 
-            1. Скачай `MyGym-*.apk` (или zip artifact `mygym-android-apk`)
+            **Версия:** ${{ steps.ver.outputs.version }}
+
+            1. Скачай `MyGym-latest-debug.apk` (стабильная ссылка) или `MyGym-${{ steps.ver.outputs.version }}-debug.apk`
             2. На Android разреши установку из неизвестных источников
-            3. Открой файл и установи
+            3. Открой файл и установи поверх старой версии
+
+            Прямая ссылка: https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk
 
             Web: https://k4rtosh.github.io/mygym/
-            Artifacts run: https://github.com/k4rtosh/mygym/actions
-          files: ${{ steps.stage.outputs.apk }}
+          files: |
+            ${{ steps.stage.outputs.apk }}
+            ${{ steps.stage.outputs.latest }}
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

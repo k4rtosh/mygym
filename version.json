@@ -1,1 +1,12 @@
-{"version":"2.5.3"}
+{
+  "version": "2.5.4",
+  "minVersion": "2.5.0",
+  "critical": false,
+  "releaseNotes": [
+    "Уведомление об устаревшей версии в web и APK",
+    "Критические обновления нельзя закрыть",
+    "Ссылка на скачивание актуального APK"
+  ],
+  "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
+  "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"
+}
