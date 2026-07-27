@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mygym-v2.5.8';
+const CACHE_NAME = 'mygym-v2.5.9';
 
 function detectSwBasePath() {
   try {
@@ -22,6 +22,7 @@ const APP_SHELL = [
   shell('/js/supabaseClient.js'),
   shell('/js/utils.js'),
   shell('/js/db.js'),
+  shell('/js/demoMode.js'),
   shell('/js/api.js'),
   shell('/js/auth.js'),
   shell('/js/sync.js'),
@@ -67,27 +68,39 @@ function isNetworkFirst(url) {
   if (host.includes('jsdelivr.net')) return true;
   if (url.pathname.includes('/data/')) return true;
   if (url.pathname.endsWith('version.json')) return true;
+  if (url.pathname.endsWith('/sw.js')) return true;
   return false;
+}
+
+function isAppShellAsset(url) {
+  if (url.origin !== self.location.origin) return false;
+  const path = url.pathname;
+  return path.endsWith('.js')
+    || path.endsWith('.css')
+    || path.endsWith('.html')
+    || path.endsWith('/')
+    || path.includes('/pages/');
+}
+
+function networkFirst(request) {
+  return fetch(request, { cache: 'no-store' })
+    .then((response) => {
+      if (response && response.status === 200 && (response.type === 'basic' || response.type === 'cors')) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone)).catch(() => {});
+      }
+      return response;
+    })
+    .catch(() => caches.match(request));
 }
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (!url.protocol.startsWith('http')) return;
-
   if (event.request.method !== 'GET') return;
 
-  if (isNetworkFirst(url)) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200 && response.type === 'basic') {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone)).catch(() => {});
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request))
-    );
+  if (isNetworkFirst(url) || isAppShellAsset(url)) {
+    event.respondWith(networkFirst(event.request));
     return;
   }
 

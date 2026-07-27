@@ -1,11 +1,11 @@
 {
-  "version": "2.5.8",
+  "version": "2.5.9",
   "minVersion": "2.5.0",
   "critical": false,
   "releaseNotes": [
-    "Кастомные диалоги подтверждения и ввода в стиле приложения",
-    "Заменены системные alert/confirm/prompt на тёмные модалки",
-    "Улучшены подписи кнопок для удаления и завершения тренировки"
+    "Исправлено обновление web-версии: очистка SW-кэша и загрузка свежих файлов",
+    "Service Worker теперь network-first для JS/CSS/HTML",
+    "После обновления страница открывается с новой версией, а не в цикле перезагрузки"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"
