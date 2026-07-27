@@ -837,3 +837,8 @@ small { color: var(--text-muted); }
   .app-header h4 { font-size: 1.15rem; }
   .stat-value { font-size: 1.4rem; }
 }
+
+/* Modal footer safe area for native Android / iOS */
+.modal .modal-footer {
+  padding-bottom: calc(0.75rem + var(--safe-bottom));
+}

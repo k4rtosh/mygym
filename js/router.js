@@ -118,6 +118,24 @@ class AppRouter {
       }
     });
 
+    document.getElementById('demo-login-btn')?.addEventListener('click', async () => {
+      try {
+        window.DemoMode.enableDemo();
+        window.DemoMode.activateDemoShims();
+        await Auth.signIn('test', 'test');
+        // Auto-seed demo data if empty
+        const sessions = await Api.listSessions();
+        if (!sessions.length) {
+          await DemoData.seed();
+        }
+        if (window.showDemoBadge) window.showDemoBadge();
+        Utils.showToast('Добро пожаловать в демо!');
+        await Router.navigate('home');
+      } catch (e) {
+        Utils.showToast(e.message || 'Ошибка', 'danger');
+      }
+    });
+
     document.getElementById('signup-submit')?.addEventListener('click', async () => {
       const name = document.getElementById('signup-name').value;
       const email = document.getElementById('signup-email').value;
