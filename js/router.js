@@ -106,6 +106,10 @@ class AppRouter {
     tabLogin?.addEventListener('click', showLogin);
     tabSignup?.addEventListener('click', showSignup);
 
+    const ver = window.MYGYM_CONFIG?.APP_VERSION || '2.5.1';
+    const verEl = document.getElementById('login-version');
+    if (verEl) verEl.textContent = ver;
+
     document.getElementById('login-submit')?.addEventListener('click', async () => {
       const email = document.getElementById('login-email').value;
       const password = document.getElementById('login-password').value;
@@ -126,15 +130,27 @@ class AppRouter {
         // Auto-seed demo data if empty
         const sessions = await Api.listSessions();
         if (!sessions.length) {
+          Utils.showToast('Заполняю демо-данные...', 'info');
           await DemoData.seed();
         }
         if (window.showDemoBadge) window.showDemoBadge();
         Utils.showToast('Добро пожаловать в демо!');
         await Router.navigate('home');
       } catch (e) {
-        Utils.showToast(e.message || 'Ошибка', 'danger');
+        console.error(e);
+        Utils.showToast(e.message || 'Ошибка демо', 'danger');
       }
     });
+
+    // Если ввели test/test в обычные поля — тоже открываем демо
+    document.getElementById('login-submit')?.addEventListener('click', async (e) => {
+      const email = (document.getElementById('login-email')?.value || '').trim();
+      const password = document.getElementById('login-password')?.value || '';
+      if (email === 'test' && password === 'test') {
+        e.stopImmediatePropagation();
+        document.getElementById('demo-login-btn')?.click();
+      }
+    }, true);
 
     document.getElementById('signup-submit')?.addEventListener('click', async () => {
       const name = document.getElementById('signup-name').value;
