@@ -52,6 +52,9 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      - name: Sync Android version
+        run: node scripts/sync-android-version.js
+
       - name: Build www + Cap sync
         run: npm run cap:sync
 
@@ -103,6 +106,8 @@ jobs:
             1. Скачай `MyGym-latest-debug.apk` (стабильная ссылка) или `MyGym-${{ steps.ver.outputs.version }}-debug.apk`
             2. На Android разреши установку из неизвестных источников
             3. Открой файл и установи поверх старой версии
+
+            **Важно:** если раньше ставил APK, собранный вручную на другом ПК, один раз удали старое приложение и поставь этот билд. Дальше все обновления из GitHub Actions будут ставиться поверх без удаления.
 
             Прямая ссылка: https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk
 

@@ -1,11 +1,11 @@
 {
-  "version": "2.5.5",
+  "version": "2.5.6",
   "minVersion": "2.5.0",
   "critical": false,
   "releaseNotes": [
-    "Исправлен сбой демо-режима при загрузке списка упражнений",
-    "DEMO-бейдж сдвинут ниже системной строки статуса",
-    "Черновики тренировок разделены между демо и обычным аккаунтом"
+    "DEMO-полоска под статус-баром — не перекрывает кнопки",
+    "Единая подпись debug APK — обновление поверх старой версии",
+    "Синхронизация versionCode Android с version.json"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"
