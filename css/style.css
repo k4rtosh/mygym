@@ -82,6 +82,31 @@ body .text-primary { color: var(--primary-color) !important; }
 
 .app-header .text-muted { color: #9aa3b5 !important; }
 
+.demo-mode-badge {
+  margin-left: 8px;
+  margin-right: 8px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f59e0b;
+  color: #111;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.demo-mode-badge-floating {
+  position: fixed;
+  right: 10px;
+  bottom: calc(var(--nav-height) + var(--safe-bottom) + 12px);
+  z-index: 20;
+  pointer-events: none;
+}
+
 .brand-mark {
   font-family: 'Sora', sans-serif;
   font-weight: 700;
