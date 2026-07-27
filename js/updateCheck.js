@@ -98,11 +98,16 @@ const UpdateCheck = {
   },
 
   async applyWebUpdate() {
+    if (window.MYGYM_CONFIG?.IS_NATIVE) return;
+    this.clearDismiss();
+    this._cachedStatus = null;
     if (window.clearCacheAndReload) {
       await window.clearCacheAndReload();
-    } else {
-      location.reload();
+      return;
     }
+    const target = new URL(window.location.href);
+    target.searchParams.set('_v', String(Date.now()));
+    window.location.replace(target.toString());
   },
 
   async applyUpdate(manifest) {
@@ -112,7 +117,7 @@ const UpdateCheck = {
       Utils.showToast('Скачай APK и установи поверх текущей версии', 'info');
       return;
     }
-    Utils.showToast('Обновляю...', 'info');
+    Utils.showToast('Загружаю новую версию...', 'info');
     await this.applyWebUpdate();
   },
 
@@ -189,7 +194,7 @@ const UpdateCheck = {
             ` : `
               <div class="alert alert-info mt-3 mb-0 small">
                 <i class="bi bi-globe"></i>
-                Нажмите «Обновить» — страница перезагрузится с актуальной версией.
+                Нажмите «Обновить» — кэш очистится и загрузится актуальная версия с сервера.
               </div>
             `}
             ${!blocking ? '<p class="text-muted small mt-3 mb-0">Напомним снова через 24 часа или в профиле.</p>' : ''}

@@ -62,11 +62,17 @@
       const cfg = window.MYGYM_CONFIG || {};
       if (cfg.IS_NATIVE) return;
       if (!('serviceWorker' in navigator)) return;
+      if (sessionStorage.getItem('mygym_skip_sw') === '1') {
+        sessionStorage.removeItem('mygym_skip_sw');
+        return;
+      }
       const swUrl = (cfg.BASE_PATH || '') + '/sw.js';
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register(swUrl).catch((err) => {
-          console.log('SW register skip:', err);
-        });
+        navigator.serviceWorker.register(swUrl, { updateViaCache: 'none' })
+          .then((registration) => registration.update())
+          .catch((err) => {
+            console.log('SW register skip:', err);
+          });
       });
     })();
   </script>

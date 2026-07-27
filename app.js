@@ -2,22 +2,24 @@ const APP_VERSION = window.MYGYM_CONFIG?.APP_VERSION || '2.0.0';
 
 async function clearCacheAndReload() {
   try {
+    // Следующая загрузка без SW — чтобы получить свежие файлы с GitHub Pages
+    sessionStorage.setItem('mygym_skip_sw', '1');
+
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
-      for (const registration of registrations) {
-        await registration.unregister();
-      }
+      await Promise.all(registrations.map((registration) => registration.unregister()));
     }
     if ('caches' in window) {
       const cacheNames = await caches.keys();
-      for (const cacheName of cacheNames) {
-        await caches.delete(cacheName);
-      }
+      await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
     }
-    location.reload();
+
+    const target = new URL(window.location.href);
+    target.searchParams.set('_v', String(Date.now()));
+    window.location.replace(target.toString());
   } catch (e) {
     console.error(e);
-    location.reload();
+    window.location.replace(`${window.location.pathname}?_v=${Date.now()}`);
   }
 }
 
