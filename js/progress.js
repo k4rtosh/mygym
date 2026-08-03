@@ -33,7 +33,7 @@ class ProgressManager {
 
     let weightHint = 'Динамика веса тела';
     let missedHint = 'План vs факт';
-    let insightsHint = 'По твоему дневнику';
+    let insightsHint = 'Коуч по дневнику';
     try {
       const latest = await Api.getLatestBodyWeight();
       if (latest) weightHint = `Сейчас ${latest.weightKg} кг · ${this.formatShortDate(latest.measuredOn)}`;
@@ -46,22 +46,25 @@ class ProgressManager {
       fromDate.setMonth(fromDate.getMonth() - 5);
       fromDate.setDate(1);
       const from = Utils.toDateStr(fromDate);
-      const [planned, sessions, exercises, bodyWeight] = await Promise.all([
+      const [planned, sessions, exercises, bodyWeight, templates] = await Promise.all([
         Api.listPlanned(from, to),
         Api.listSessions(),
         Api.listExercises().catch(() => []),
-        Api.listBodyWeight().catch(() => [])
+        Api.listBodyWeight().catch(() => []),
+        Api.listTemplates().catch(() => [])
       ]);
       const summary = AnalyticsAdherence.summarize({ planned, sessions, from, to });
       missedHint = summary.totals.missed
         ? `${summary.totals.missed} пропусков за период`
         : 'Пропусков нет — отличный ритм';
-      if (window.AnalyticsInsights?.buildCards) {
-        const pack = AnalyticsInsights.buildCards({
+      const packBuilder = window.AnalyticsCoach?.buildPack || window.AnalyticsInsights?.buildCards;
+      if (packBuilder) {
+        const pack = packBuilder({
           planned,
           sessions,
           bodyWeightEntries: bodyWeight,
           exercises,
+          templates,
           from,
           to
         });
@@ -76,9 +79,9 @@ class ProgressManager {
       </div>
       <div class="container fade-in progress-hub">
         <button type="button" class="progress-hub-item" data-progress="insights">
-          <div class="progress-hub-icon"><i class="bi bi-lightbulb"></i></div>
+          <div class="progress-hub-icon"><i class="bi bi-mortarboard"></i></div>
           <div class="progress-hub-text">
-            <div class="progress-hub-title">Подсказки</div>
+            <div class="progress-hub-title">Коуч</div>
             <div class="progress-hub-desc">${Utils.escapeHtml(insightsHint)}</div>
           </div>
           <i class="bi bi-chevron-right progress-hub-arrow"></i>
@@ -735,8 +738,8 @@ class ProgressManager {
             <i class="bi bi-arrow-left" aria-hidden="true"></i>
           </button>
           <div>
-            <h4 class="mb-0">Подсказки</h4>
-            <p class="text-muted mb-0 small">По твоему дневнику</p>
+            <h4 class="mb-0">Коуч</h4>
+            <p class="text-muted mb-0 small">Подсказки по дневнику · правила, без ИИ</p>
           </div>
         </div>
       </div>
@@ -755,37 +758,50 @@ class ProgressManager {
     let sessions = [];
     let exercises = [];
     let bodyWeight = [];
+    let templates = [];
     try {
-      [planned, sessions, exercises, bodyWeight] = await Promise.all([
+      [planned, sessions, exercises, bodyWeight, templates] = await Promise.all([
         Api.listPlanned(from, to),
         Api.listSessions(),
         Api.listExercises().catch(() => DB.loadExercisesCache().then((c) => c || [])),
-        Api.listBodyWeight().catch(() => [])
+        Api.listBodyWeight().catch(() => []),
+        Api.listTemplates().catch(() => [])
       ]);
     } catch (e) {
       Utils.showToast(e.message || 'Нет данных', 'warning');
     }
 
-    const pack = window.AnalyticsInsights
-      ? AnalyticsInsights.buildCards({
+    const pack = window.AnalyticsCoach?.buildPack
+      ? AnalyticsCoach.buildPack({
         planned,
         sessions,
         bodyWeightEntries: bodyWeight,
         exercises,
+        templates,
         from,
         to,
         today: to
       })
-      : { cards: [], hubHint: 'Модуль подсказок не загружен', counts: {} };
+      : window.AnalyticsInsights
+        ? AnalyticsInsights.buildCards({
+          planned,
+          sessions,
+          bodyWeightEntries: bodyWeight,
+          exercises,
+          from,
+          to,
+          today: to
+        })
+        : { cards: [], hubHint: 'Модуль коуча не загружен', counts: {} };
 
     const list = document.getElementById('insights-list');
     if (!list) return;
 
     if (!pack.cards?.length) {
       list.innerHTML = Utils.emptyStateHtml({
-        icon: 'bi-lightbulb',
-        title: 'Пока рано для подсказок',
-        text: 'Нужно чуть больше тренировок, плана и замеров — тогда здесь появятся замечания по дневнику.'
+        icon: 'bi-mortarboard',
+        title: 'Пока рано для коуча',
+        text: 'Нужно чуть больше тренировок, плана и замеров — тогда здесь появятся советы и замечания.'
       });
       return;
     }
@@ -793,12 +809,14 @@ class ProgressManager {
     const ctaRoute = {
       missed: 'progress-missed',
       exercises: 'progress-exercises',
-      'body-weight': 'progress-body-weight'
+      'body-weight': 'progress-body-weight',
+      templates: 'templates'
     };
     const ctaLabel = {
       missed: 'К пропускам',
       exercises: 'К упражнениям',
-      'body-weight': 'К весу'
+      'body-weight': 'К весу',
+      templates: 'К шаблонам'
     };
 
     const severityLabel = {
@@ -807,10 +825,15 @@ class ProgressManager {
       info: 'Заметка'
     };
 
-    list.innerHTML = pack.cards.map((card) => `
-      <article class="insight-card insight-${Utils.escapeHtml(card.severity || 'info')}">
+    list.innerHTML = pack.cards.map((card) => {
+      const isCoach = card.kind === 'coach';
+      const badge = isCoach
+        ? (card.id === 'coach-brief' ? 'Коуч' : 'Совет')
+        : (severityLabel[card.severity] || 'Заметка');
+      return `
+      <article class="insight-card insight-${Utils.escapeHtml(card.severity || 'info')}${isCoach ? ' insight-coach' : ''}${card.id === 'coach-brief' ? ' insight-brief' : ''}">
         <div class="insight-card-top">
-          <span class="insight-severity">${severityLabel[card.severity] || 'Заметка'}</span>
+          <span class="insight-severity">${badge}</span>
           ${card.meta ? `<span class="insight-meta">${Utils.escapeHtml(card.meta)}</span>` : ''}
         </div>
         <h6 class="insight-title">${Utils.escapeHtml(card.title)}</h6>
@@ -821,8 +844,8 @@ class ProgressManager {
             ${Utils.escapeHtml(ctaLabel[card.cta] || 'Открыть')}
           </button>
         ` : ''}
-      </article>
-    `).join('');
+      </article>`;
+    }).join('');
 
     list.querySelectorAll('[data-insight-cta]').forEach((btn) => {
       btn.addEventListener('click', () => {

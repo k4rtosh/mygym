@@ -1,12 +1,12 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": [
-    "Релиз 1.0: стабильный дневник тренировок (web + Android)",
-    "Шаблоны: перестановка упражнений drag-and-drop (ручка ⋮⋮ вместо стрелок)",
-    "Feature freeze: без AI-коуча в этом релизе",
-    "Без агрессивных жестов навигации"
+    "Коуч (правила): фокус, частота, плато, следующий шаг поверх подсказок",
+    "Демо: больше истории (~12 нед., 5 шаблонов, пропуски и сценарии для коуча)",
+    "Экран Прогресс → Коуч; авто-ресид демо при новой версии сида",
+    "Без LLM — ИИ-коуч позже через Edge Function"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"

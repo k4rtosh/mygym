@@ -1456,6 +1456,19 @@ small { color: var(--text-muted); }
   background: rgba(62, 207, 142, 0.05);
 }
 
+.insight-card.insight-coach {
+  border-color: rgba(120, 180, 255, 0.28);
+}
+
+.insight-card.insight-brief {
+  background: linear-gradient(135deg, rgba(120, 180, 255, 0.1), rgba(255, 255, 255, 0.03));
+  border-color: rgba(120, 180, 255, 0.4);
+}
+
+.insight-card.insight-brief .insight-title {
+  font-size: 1.05rem;
+}
+
 .insight-card-top {
   display: flex;
   justify-content: space-between;

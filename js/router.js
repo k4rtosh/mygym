@@ -336,9 +336,9 @@ class AppRouter {
         window.DemoMode.enableDemo();
         window.DemoMode.activateDemoShims();
         await Auth.signIn('test', 'test');
-        // Auto-seed demo data if empty
+        // Auto-seed demo data if empty or seed schema bumped
         const sessions = await Api.listSessions();
-        if (!sessions.length) {
+        if (!sessions.length || DemoData.needsReseed?.()) {
           Utils.showToast('Заполняю демо-данные...', 'info');
           await DemoData.seed();
         }
