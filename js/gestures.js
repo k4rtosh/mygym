@@ -262,7 +262,8 @@ const Gestures = {
       root.removeEventListener('pointermove', onMove);
       root.removeEventListener('pointerup', onUp);
       root.removeEventListener('pointercancel', reset);
-      indicator.remove();
+      indicator?.remove();
+      indicator = null;
     };
   },
 
@@ -294,16 +295,15 @@ const Gestures = {
 
   /** Attach PTR when the current page supports it. */
   bindPagePullToRefresh() {
-    const page = Router?.currentPage;
-    const fn = this.refreshForPage(page);
-    const app = document.getElementById('app');
-    if (!app || !fn) return;
     if (this._ptrDispose) {
       this._ptrDispose();
       this._ptrDispose = null;
     }
+    const page = Router?.currentPage;
+    const fn = this.refreshForPage(page);
+    const app = document.getElementById('app');
     // Skip during active workout (gestures would fight steppers).
-    if (page === 'active-workout' || page === 'login') return;
+    if (!app || !fn || page === 'active-workout' || page === 'login') return;
     this._ptrDispose = this.attachPullToRefresh(app, fn);
   }
 };
