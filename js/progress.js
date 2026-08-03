@@ -159,8 +159,8 @@ class ProgressManager {
     container.innerHTML = `
       <div class="app-header fade-in">
         <div class="d-flex align-items-center">
-          <button class="btn btn-link text-white me-2" onclick="Router.navigate('progress')">
-            <i class="bi bi-arrow-left"></i>
+          <button class="btn btn-link text-white me-2" onclick="Router.navigate('progress')" aria-label="Назад к прогрессу">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
           </button>
           <div>
             <h4 class="mb-0">Прогресс тренировок</h4>
@@ -321,11 +321,21 @@ class ProgressManager {
     this.destroyChart();
 
     if (!points.length) {
-      if (hint) hint.textContent = 'Пока нет завершённых подходов';
-      if (statsEl) statsEl.innerHTML = '';
+      if (hint) hint.textContent = '';
+      if (statsEl) {
+        statsEl.innerHTML = Utils.emptyStateHtml({
+          icon: 'bi-bar-chart',
+          title: 'Пока нет точек на графике',
+          text: isBw
+            ? 'Заверши подходы с повторами — график доп. веса появится здесь.'
+            : 'Заверши подходы с весом и повторами — график появится здесь.'
+        });
+      }
+      canvas.classList.add('d-none');
       return;
     }
 
+    canvas.classList.remove('d-none');
     const last = points[points.length - 1];
     const first = points[0];
     const peak = points.reduce((a, b) => (b.maxWeight > a.maxWeight ? b : a), points[0]);
@@ -450,8 +460,8 @@ class ProgressManager {
     container.innerHTML = `
       <div class="app-header fade-in">
         <div class="d-flex align-items-center">
-          <button class="btn btn-link text-white me-2" onclick="Router.navigate('progress')">
-            <i class="bi bi-arrow-left"></i>
+          <button class="btn btn-link text-white me-2" onclick="Router.navigate('progress')" aria-label="Назад к прогрессу">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
           </button>
           <div>
             <h4 class="mb-0">Собственный вес</h4>
@@ -493,12 +503,19 @@ class ProgressManager {
       if (title) title.textContent = 'Пока нет замеров';
       if (hint) hint.textContent = '';
       if (statsEl) statsEl.innerHTML = '';
+      if (canvas) canvas.classList.add('d-none');
       if (empty) {
-        empty.textContent = 'Заверши тренировку и укажи вес — или заполни первичные данные в профиле.';
+        empty.innerHTML = Utils.emptyStateHtml({
+          icon: 'bi-person',
+          title: 'Замеров веса ещё нет',
+          text: 'Укажи вес после тренировки или заполни первичные данные в профиле.'
+        });
       }
       return;
     }
 
+    if (canvas) canvas.classList.remove('d-none');
+    if (empty) empty.innerHTML = '';
     if (title) title.textContent = `${summary.last.weightKg} кг`;
     if (hint) {
       hint.textContent = `${summary.count} замеров · с ${this.formatShortDate(summary.first.date)}`;
@@ -513,7 +530,7 @@ class ProgressManager {
         <div class="chart-stat"><span>Динамика</span><strong class="${delta <= 0 ? 'up' : 'down'}">${deltaTxt}</strong></div>
       `;
     }
-    if (empty) empty.textContent = '';
+    if (empty) empty.innerHTML = '';
 
     this.chart = new Chart(canvas.getContext('2d'), {
       type: 'line',
@@ -576,8 +593,8 @@ class ProgressManager {
     container.innerHTML = `
       <div class="app-header fade-in">
         <div class="d-flex align-items-center">
-          <button class="btn btn-link text-white me-2" onclick="Router.navigate('progress')">
-            <i class="bi bi-arrow-left"></i>
+          <button class="btn btn-link text-white me-2" onclick="Router.navigate('progress')" aria-label="Назад к прогрессу">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
           </button>
           <div>
             <h4 class="mb-0">Пропуски</h4>
@@ -714,8 +731,8 @@ class ProgressManager {
     container.innerHTML = `
       <div class="app-header fade-in">
         <div class="d-flex align-items-center">
-          <button class="btn btn-link text-white me-2" onclick="Router.navigate('progress')">
-            <i class="bi bi-arrow-left"></i>
+          <button class="btn btn-link text-white me-2" onclick="Router.navigate('progress')" aria-label="Назад к прогрессу">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
           </button>
           <div>
             <h4 class="mb-0">Подсказки</h4>
@@ -765,7 +782,11 @@ class ProgressManager {
     if (!list) return;
 
     if (!pack.cards?.length) {
-      list.innerHTML = '<p class="text-muted">Пока нечего показать.</p>';
+      list.innerHTML = Utils.emptyStateHtml({
+        icon: 'bi-lightbulb',
+        title: 'Пока рано для подсказок',
+        text: 'Нужно чуть больше тренировок, плана и замеров — тогда здесь появятся замечания по дневнику.'
+      });
       return;
     }
 

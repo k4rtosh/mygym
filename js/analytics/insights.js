@@ -144,7 +144,7 @@
         id: 'miss-streak',
         severity: 'warn',
         title: `Серия пропусков: ${streaks.current}`,
-        body: `Сейчас подряд пропущено ${streaks.current} план(а/ов). Самая длинная серия за период — ${streaks.longest}. Верни ритм с короткой сессии.`,
+        body: `Сейчас подряд пропущено ${streaks.current} ${window.Utils ? Utils.pluralRu(streaks.current, ['день', 'дня', 'дней']) : 'дн.'} по плану. Самая длинная серия за период — ${streaks.longest}. Верни ритм с короткой сессии.`,
         meta: `Всего пропусков: ${missed.length}`,
         cta: 'missed'
       };
@@ -154,10 +154,10 @@
       id: 'miss-streak',
       severity: missed.length >= 3 ? 'warn' : 'info',
       title: `Пропусков: ${missed.length}`,
-      body: streaks.longest >= 2
+        body: streaks.longest >= 2
         ? `Самая длинная серия подряд — ${streaks.longest}. Последний пропуск: ${formatDateShort(missed[missed.length - 1])}.`
         : `Пока без длинных серий. Последний пропуск: ${formatDateShort(missed[missed.length - 1])}.`,
-      meta: `План выполнен частично · ${planned} дн.`,
+      meta: `В плане ${planned} ${window.Utils ? Utils.pluralRu(planned, ['день', 'дня', 'дней']) : 'дн.'}`,
       cta: 'missed'
     };
   }

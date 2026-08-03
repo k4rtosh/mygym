@@ -1,12 +1,12 @@
 {
-  "version": "0.8.1",
+  "version": "0.9.0",
   "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": [
-    "Раздел «Подсказки» вместо «Разбор ошибок» — мягкий тон, без кричащего заголовка",
-    "Каталог упражнений: 10 категорий, минус дубли, правки и type для фармерской",
-    "Копирайт карточек спокойнее: Замечание / Заметка / Норма",
-    "Для prod: перезалей seed_exercises.sql в Supabase после мержа"
+    "Общие empty states: история, шаблоны, упражнения, главная, графики",
+    "A11y: aria-label на назад/иконки, labels на логине, aria-current у tab, календарь",
+    "Копирайт и плюралы; focus-visible и prefers-reduced-motion",
+    "Без изменений в активной тренировке и без жестов"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"

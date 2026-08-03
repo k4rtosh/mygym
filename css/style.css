@@ -6,12 +6,14 @@
   --card-bg: #151c2a;
   --text-color: #e8ecf4;
   --text-muted: #8b93a7;
+  --text-faint: #6f778a;
   --border-radius: 16px;
   --nav-height: 72px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --stroke: rgba(255, 255, 255, 0.08);
   --glow: rgba(255, 90, 106, 0.22);
+  --surface-soft: rgba(255, 255, 255, 0.03);
 }
 
 /* Capacitor Android: WebView often reports 0 for env(safe-area-*).
@@ -804,6 +806,50 @@ body.is-demo-mode.is-workout-session #app {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .fade-in { animation: none; }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2.25rem 1rem 1.75rem;
+}
+
+.empty-state-icon {
+  font-size: 2.75rem;
+  color: var(--text-faint, #6f778a);
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.empty-state-title {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #fff;
+  margin: 0 0 0.35rem;
+}
+
+.empty-state-text {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  max-width: 28rem;
+  margin: 0 auto 1rem;
+}
+
+.nav-item:focus-visible,
+.hist-list-item:focus-visible,
+.progress-hub-item:focus-visible,
+.cal-cell:focus-visible,
+.home-last-clickable:focus-visible,
+.btn:focus-visible,
+.start-workout-btn:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
 input.form-control,
 input.form-control-sm,
 select.form-control,
@@ -814,7 +860,7 @@ select.form-select {
   border-radius: 12px;
 }
 
-input.form-control::placeholder { color: #7d8699; }
+input.form-control::placeholder { color: var(--text-faint, #7d8699); }
 
 input.form-control:focus,
 input.form-control-sm:focus,

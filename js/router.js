@@ -438,28 +438,36 @@ class AppRouter {
 
       const lastWorkoutInfo = document.getElementById('last-workout-info');
       const completed = sessions.filter((s) => s.completed && s.endTime);
-      if (lastWorkoutInfo && completed.length) {
-        const last = completed.sort((a, b) => new Date(b.startTime) - new Date(a.startTime))[0];
-        lastWorkoutInfo.innerHTML = `
-          <button type="button" class="home-last card home-last-clickable w-100 text-start"
-            id="last-workout-open" data-session-id="${Utils.escapeHtml(last.id)}">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-start gap-2">
-                <div>
-                  <div class="home-last-label">Последняя тренировка</div>
-                  <div class="home-last-title">${Utils.escapeHtml(last.templateName)}</div>
-                  <div class="home-last-meta">
-                    ${Utils.formatDate(last.date + 'T12:00:00')} · ${Utils.formatTime(last.duration || 0)}
+      if (lastWorkoutInfo) {
+        if (completed.length) {
+          const last = completed.sort((a, b) => new Date(b.startTime) - new Date(a.startTime))[0];
+          lastWorkoutInfo.innerHTML = `
+            <button type="button" class="home-last card home-last-clickable w-100 text-start"
+              id="last-workout-open" data-session-id="${Utils.escapeHtml(last.id)}">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <div>
+                    <div class="home-last-label">Последняя тренировка</div>
+                    <div class="home-last-title">${Utils.escapeHtml(last.templateName)}</div>
+                    <div class="home-last-meta">
+                      ${Utils.formatDate(last.date + 'T12:00:00')} · ${Utils.formatTime(last.duration || 0)}
+                    </div>
                   </div>
+                  <i class="bi bi-chevron-right home-last-chevron" aria-hidden="true"></i>
                 </div>
-                <i class="bi bi-chevron-right home-last-chevron" aria-hidden="true"></i>
               </div>
-            </div>
-          </button>
-        `;
-        document.getElementById('last-workout-open')?.addEventListener('click', () => {
-          Router.navigate('history-detail', { sessionId: last.id });
-        });
+            </button>
+          `;
+          document.getElementById('last-workout-open')?.addEventListener('click', () => {
+            Router.navigate('history-detail', { sessionId: last.id });
+          });
+        } else {
+          lastWorkoutInfo.innerHTML = Utils.emptyStateHtml({
+            icon: 'bi-flag',
+            title: 'Ещё нет завершённых тренировок',
+            text: 'После первой сохранённой сессии здесь появится быстрый доступ к ней.'
+          });
+        }
       }
 
       const planned = await Api.getPlannedForDate(today);
