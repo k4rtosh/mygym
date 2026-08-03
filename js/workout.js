@@ -10,6 +10,8 @@ class WorkoutManager {
   /** Rest stopwatch elapsed seconds (counts up). */
   static restElapsedSeconds = 0;
   static restRunning = false;
+  /** Focus CTA on exercise screen: idle → working → resting → working… */
+  static exercisePhase = 'idle';
   /** Index of the exercise marked "current" in the list. */
   static activeExerciseIndex = null;
   /** Which exercise fullscreen is open (null = list view). */
@@ -311,6 +313,7 @@ class WorkoutManager {
     this.sessionView = 'list';
     this.restElapsedSeconds = 0;
     this.restRunning = false;
+    this.exercisePhase = 'idle';
 
     this.startTimer();
     await this.renderActiveWorkout();
@@ -320,7 +323,7 @@ class WorkoutManager {
     this.pauseSessionUi();
     this.sessionView = 'list';
     this.openExerciseIndex = null;
-    Utils.showToast('Тренировка свёрнута — продолжить можно с главной', 'info');
+    this.exercisePhase = 'idle';
     Router.navigate('home');
   }
 
@@ -365,9 +368,7 @@ class WorkoutManager {
     if (this.timerInterval) clearInterval(this.timerInterval);
     this.timerInterval = setInterval(() => {
       this.elapsedSeconds = Math.floor((Date.now() - this.startTime.getTime()) / 1000);
-      document.querySelectorAll('#timer-display').forEach((el) => {
-        el.textContent = Utils.formatTime(this.elapsedSeconds);
-      });
+      this.syncSessionClock();
     }, 1000);
   }
 
@@ -381,6 +382,13 @@ class WorkoutManager {
   static openExercise(index) {
     const ex = this.currentSession?.exercises?.[index];
     if (!ex) return;
+    const prevOpen = this.openExerciseIndex;
+    const phaseOwner = prevOpen != null ? prevOpen : this.activeExerciseIndex;
+    if (phaseOwner != null && phaseOwner !== index) {
+      if (this.exerciseTimers[phaseOwner]) this.stopExerciseTimer(phaseOwner);
+      this.stopRestStopwatch({ announce: false });
+      this.exercisePhase = 'idle';
+    }
     this.openExerciseIndex = index;
     this.sessionView = 'exercise';
     if (!ex.completed) this.activeExerciseIndex = index;
@@ -500,11 +508,9 @@ class WorkoutManager {
 
     const name = this.exerciseName(exercise.exerciseId);
     const isBw = this.isBodyweight(exercise.exerciseId);
-    const running = !!this.exerciseTimers[index];
     const timerValue = this.exerciseTimes[index] || exercise.exerciseTime || 0;
-    const restRunning = this.restRunning;
-    const restValue = this.restElapsedSeconds;
-    const { done, total } = this.sessionProgress();
+    const { total } = this.sessionProgress();
+    const phase = exercise.completed ? 'idle' : this.exercisePhase;
 
     container.innerHTML = `
       <div class="workout-session workout-exercise-screen fade-in">
@@ -514,8 +520,8 @@ class WorkoutManager {
             <span>К списку</span>
           </button>
           <div class="session-topbar-center">
-            <div class="session-progress-text">${index + 1}/${total || 0} · сессия</div>
-            <div class="timer-display timer-display-inline" id="timer-display">00:00</div>
+            <div class="session-progress-text">${index + 1}/${total || 0} · упражнение</div>
+            <div class="timer-display timer-display-inline" id="timer-display">${Utils.formatTime(timerValue)}</div>
           </div>
           <div class="session-topbar-spacer"></div>
         </div>
@@ -538,20 +544,9 @@ class WorkoutManager {
         </div>
 
         <div class="ex-screen-dock">
-          <div class="ex-timer-chips">
-            <button type="button" class="ex-chip ${running ? 'is-live' : ''}"
-              onclick="WorkoutManager.toggleExerciseTimer(${index})">
-              <span class="ex-chip-label">Упражнение</span>
-              <strong id="dock-ex-timer">${Utils.formatTime(timerValue)}</strong>
-              <span class="ex-chip-action">${running ? 'Пауза' : 'Старт'}</span>
-            </button>
-            <button type="button" class="ex-chip ${restRunning ? 'is-rest' : ''}"
-              onclick="WorkoutManager.toggleRestStopwatch()">
-              <span class="ex-chip-label">Отдых</span>
-              <strong id="rest-timer-value">${Utils.formatTime(restValue)}</strong>
-              <span class="ex-chip-action">${restRunning ? 'Пауза' : 'Старт'}</span>
-            </button>
-          </div>
+          ${exercise.completed
+            ? ''
+            : this.renderFocusButtonHtml(index, phase)}
 
           <div class="ex-dock-actions">
             <button type="button" class="btn btn-outline-light flex-fill" onclick="WorkoutManager.addSet(${index})">
@@ -568,12 +563,98 @@ class WorkoutManager {
         </div>
       </div>
     `;
+  }
 
-    this.syncSessionClock();
+  static focusPhaseLabel(phase) {
+    if (phase === 'working') return 'Отдых';
+    if (phase === 'resting') return 'Продолжить';
+    return 'Начать упражнение';
+  }
+
+  static focusPhaseHint(phase) {
+    if (phase === 'working') return 'Работа идёт · нажми для отдыха';
+    if (phase === 'resting') return `Отдых ${Utils.formatTime(this.restElapsedSeconds)}`;
+    return 'Таймер упражнения в шапке';
+  }
+
+  static renderFocusButtonHtml(index, phase = this.exercisePhase) {
+    return `
+      <button type="button" class="ex-focus-btn ex-focus-${phase}" id="ex-focus-btn"
+        onclick="WorkoutManager.cycleExercisePhase(${index})">
+        <span class="ex-focus-label">${this.focusPhaseLabel(phase)}</span>
+        <span class="ex-focus-hint" id="ex-focus-hint">${this.focusPhaseHint(phase)}</span>
+        ${phase === 'resting' ? `<span class="visually-hidden" id="rest-timer-value">${Utils.formatTime(this.restElapsedSeconds)}</span>` : ''}
+      </button>
+    `;
+  }
+
+  /** Advance idle → working → resting → working. */
+  static cycleExercisePhase(index) {
+    const exercise = this.currentSession?.exercises?.[index];
+    if (!exercise || exercise.completed) {
+      Utils.showToast('Упражнение уже завершено', 'warning');
+      return;
+    }
+
+    if (this.exercisePhase === 'idle') {
+      this.stopRestStopwatch({ announce: false });
+      this.startExerciseTimer(index);
+      this.exercisePhase = 'working';
+      this.buzz();
+    } else if (this.exercisePhase === 'working') {
+      this.stopExerciseTimer(index);
+      this.startRestStopwatch(true);
+      this.exercisePhase = 'resting';
+      this.buzz();
+    } else {
+      this.stopRestStopwatch({ announce: true });
+      this.startExerciseTimer(index);
+      this.exercisePhase = 'working';
+    }
+
+    this.syncFocusButton(index);
+  }
+
+  static syncFocusButton(index = this.openExerciseIndex) {
+    const btn = document.getElementById('ex-focus-btn');
+    if (!btn || index == null) return;
+    const phase = this.exercisePhase;
+    btn.className = `ex-focus-btn ex-focus-${phase}`;
+    const label = btn.querySelector('.ex-focus-label');
+    const hint = btn.querySelector('.ex-focus-hint');
+    if (label) label.textContent = this.focusPhaseLabel(phase);
+    if (hint) {
+      hint.id = 'ex-focus-hint';
+      hint.textContent = this.focusPhaseHint(phase);
+    }
+    let restHidden = document.getElementById('rest-timer-value');
+    if (phase === 'resting') {
+      if (!restHidden) {
+        restHidden = document.createElement('span');
+        restHidden.id = 'rest-timer-value';
+        restHidden.className = 'visually-hidden';
+        btn.appendChild(restHidden);
+      }
+      restHidden.textContent = Utils.formatTime(this.restElapsedSeconds);
+    } else if (restHidden) {
+      restHidden.remove();
+    }
   }
 
   static syncSessionClock() {
+    if (!this.startTime) return;
     this.elapsedSeconds = Math.floor((Date.now() - this.startTime.getTime()) / 1000);
+
+    // Exercise screen: header shows exercise timer (session timer lives on the list).
+    if (this.sessionView === 'exercise' && this.openExerciseIndex != null) {
+      const idx = this.openExerciseIndex;
+      const t = this.exerciseTimes[idx] ?? this.currentSession?.exercises?.[idx]?.exerciseTime ?? 0;
+      document.querySelectorAll('#timer-display').forEach((el) => {
+        el.textContent = Utils.formatTime(t);
+      });
+      return;
+    }
+
     document.querySelectorAll('#timer-display').forEach((el) => {
       el.textContent = Utils.formatTime(this.elapsedSeconds);
     });
@@ -671,17 +752,16 @@ class WorkoutManager {
     await this.renderActiveWorkout();
   }
 
-  /** Empty set — user fills weight/reps manually. */
+  /** Empty set — user fills weight/reps manually. Does not start rest. */
   static addSet(exerciseIndex) {
     const ex = this.currentSession.exercises[exerciseIndex];
     if (!ex.sets) ex.sets = [];
     ex.sets.push({ weight: null, reps: null });
     if (!ex.completed) this.activeExerciseIndex = exerciseIndex;
-    this.startRestStopwatch(true);
     this.saveAndRender();
   }
 
-  /** Copy weight/reps from the previous set only. */
+  /** Copy weight/reps from the previous set only. Does not start rest. */
   static repeatLastSet(exerciseIndex) {
     const ex = this.currentSession.exercises[exerciseIndex];
     if (!ex.sets) ex.sets = [];
@@ -695,7 +775,6 @@ class WorkoutManager {
       reps: last.reps == null ? null : last.reps
     });
     if (!ex.completed) this.activeExerciseIndex = exerciseIndex;
-    this.startRestStopwatch(true);
     this.saveAndRender();
   }
 
@@ -716,6 +795,7 @@ class WorkoutManager {
     }
     this.stopExerciseTimer(exerciseIndex);
     this.stopRestStopwatch({ announce: false });
+    this.exercisePhase = 'idle';
     const exercise = this.currentSession.exercises[exerciseIndex];
     exercise.exerciseTime = this.exerciseTimes[exerciseIndex] || exercise.exerciseTime || 0;
     exercise.completed = true;
@@ -738,10 +818,11 @@ class WorkoutManager {
     this.activeExerciseIndex = exerciseIndex;
     this.openExerciseIndex = exerciseIndex;
     this.sessionView = 'exercise';
+    this.exercisePhase = 'idle';
     this.saveAndRender();
   }
 
-  /** Rest as stopwatch: counts up; pause ends the rest. */
+  /** Rest as stopwatch: counts up; ending rest announces elapsed. */
   static startRestStopwatch(reset = true) {
     if (this.restInterval) {
       clearInterval(this.restInterval);
@@ -749,15 +830,22 @@ class WorkoutManager {
     }
     if (reset) this.restElapsedSeconds = 0;
     this.restRunning = true;
-    const val = document.getElementById('rest-timer-value');
-    if (val) val.textContent = Utils.formatTime(this.restElapsedSeconds);
-    this.syncRestChip(true);
+    this.updateRestDisplays();
 
     this.restInterval = setInterval(() => {
       this.restElapsedSeconds += 1;
-      const el = document.getElementById('rest-timer-value');
-      if (el) el.textContent = Utils.formatTime(this.restElapsedSeconds);
+      this.updateRestDisplays();
     }, 1000);
+  }
+
+  static updateRestDisplays() {
+    const formatted = Utils.formatTime(this.restElapsedSeconds);
+    const hint = document.getElementById('ex-focus-hint');
+    if (hint && this.exercisePhase === 'resting') {
+      hint.textContent = `Отдых ${formatted}`;
+    }
+    const hidden = document.getElementById('rest-timer-value');
+    if (hidden) hidden.textContent = formatted;
   }
 
   static stopRestStopwatch({ announce = true } = {}) {
@@ -768,24 +856,10 @@ class WorkoutManager {
       this.restInterval = null;
     }
     this.restRunning = false;
-    this.syncRestChip(false);
     if (announce && wasRunning && elapsed > 0) {
       this.buzz();
       Utils.showToast(`Отдых ${Utils.formatTime(elapsed)}`);
     }
-  }
-
-  static syncRestChip(running) {
-    const chip = document.getElementById('rest-timer-value')?.closest('.ex-chip');
-    if (!chip) return;
-    chip.classList.toggle('is-rest', !!running);
-    const action = chip.querySelector('.ex-chip-action');
-    if (action) action.textContent = running ? 'Пауза' : 'Старт';
-  }
-
-  static toggleRestStopwatch() {
-    if (this.restRunning) this.stopRestStopwatch({ announce: true });
-    else this.startRestStopwatch(true);
   }
 
   /** @deprecated kept for pauseSessionUi / finishWorkout call sites */
@@ -847,6 +921,11 @@ class WorkoutManager {
                 });
         this.exerciseTimes[this.currentSession.exercises.length - 1] = 0;
         const newIndex = this.currentSession.exercises.length - 1;
+        if (this.activeExerciseIndex != null && this.exerciseTimers[this.activeExerciseIndex]) {
+          this.stopExerciseTimer(this.activeExerciseIndex);
+        }
+        this.stopRestStopwatch({ announce: false });
+        this.exercisePhase = 'idle';
         this.activeExerciseIndex = newIndex;
         this.openExerciseIndex = newIndex;
         this.sessionView = 'exercise';
@@ -866,6 +945,7 @@ class WorkoutManager {
     }))) return;
     this.stopTimer();
     this.stopRestTimer();
+    this.exercisePhase = 'idle';
     (this.currentSession.exercises || []).forEach((ex, index) => {
       if (this.exerciseTimers[index]) this.stopExerciseTimer(index);
       ex.exerciseTime = this.exerciseTimes[index] || ex.exerciseTime || 0;
@@ -916,14 +996,16 @@ class WorkoutManager {
     this.exerciseTimers[exerciseIndex] = setInterval(() => {
       this.exerciseTimes[exerciseIndex]++;
       const formatted = Utils.formatTime(this.exerciseTimes[exerciseIndex]);
-      const dock = document.getElementById('dock-ex-timer');
-      if (dock) dock.textContent = formatted;
+      if (this.sessionView === 'exercise' && this.openExerciseIndex === exerciseIndex) {
+        document.querySelectorAll('#timer-display').forEach((el) => {
+          el.textContent = formatted;
+        });
+      }
       if (this.currentSession?.exercises[exerciseIndex]) {
         this.currentSession.exercises[exerciseIndex].exerciseTime = this.exerciseTimes[exerciseIndex];
       }
       DB.saveActiveSession(this.currentSession);
     }, 1000);
-    this.syncExerciseChip(exerciseIndex, true);
   }
 
   static stopExerciseTimer(exerciseIndex) {
@@ -934,16 +1016,7 @@ class WorkoutManager {
         this.currentSession.exercises[exerciseIndex].exerciseTime = this.exerciseTimes[exerciseIndex] || 0;
         this.persist(true);
       }
-      this.syncExerciseChip(exerciseIndex, false);
     }
-  }
-
-  static syncExerciseChip(exerciseIndex, isRunning) {
-    const chip = document.getElementById('dock-ex-timer')?.closest('.ex-chip');
-    if (!chip) return;
-    chip.classList.toggle('is-live', !!isRunning);
-    const action = chip.querySelector('.ex-chip-action');
-    if (action) action.textContent = isRunning ? 'Пауза' : 'Старт';
   }
 
   static toggleExerciseTimer(exerciseIndex) {
@@ -953,10 +1026,6 @@ class WorkoutManager {
     }
     if (this.exerciseTimers[exerciseIndex]) this.stopExerciseTimer(exerciseIndex);
     else this.startExerciseTimer(exerciseIndex);
-  }
-
-  static updateExerciseTimerButton(exerciseIndex, isRunning) {
-    this.syncExerciseChip(exerciseIndex, isRunning);
   }
 
   static restoreExerciseTimers() {
