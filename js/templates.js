@@ -39,11 +39,11 @@ class TemplatesManager {
                 <small class="text-muted">${count} ${this.pluralExercises(count)}</small>
               </div>
               <div class="tpl-list-actions" onclick="event.stopPropagation()">
-                <button class="btn btn-sm btn-outline-primary" title="Начать"
+                <button class="btn btn-sm btn-outline-success" title="Начать"
                   onclick="WorkoutManager.startFromTemplate('${t.id}')">
                   <i class="bi bi-play-fill"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-light" title="Копировать"
+                <button class="btn btn-sm btn-outline-info" title="Копировать"
                   onclick="TemplatesManager.duplicateTemplate('${t.id}')">
                   <i class="bi bi-copy"></i>
                 </button>
