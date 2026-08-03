@@ -1,7 +1,7 @@
 # MyGym — технический обзор проекта
 
 > Документ для разработчиков и ИИ-агентов. Описывает актуальную архитектуру, данные, модули, деплой и соглашения.  
-> Версия документа соответствует релизу **0.7.2** (см. `version.json`, `js/config.js`).
+> Версия документа соответствует релизу **0.8.0** (см. `version.json`, `js/config.js`).
 
 ---
 
@@ -409,6 +409,7 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 - `AnalyticsProfile` — возраст, gaps онбординга
 - `AnalyticsBodyWeight` — нормализация и сводка серии веса
 - `AnalyticsAdherence` — план/факт/пропуски по диапазону дат
+- `AnalyticsInsights` — карточки «разбор ошибок» (`buildCards`)
 
 Новую аналитику писать **сюда**, UI — тонкая оболочка в `progress.js`.
 
@@ -437,7 +438,8 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 `CalendarManager.quickPlan(dateStr)` — компактный план (long-press / CTA на главной).
 
 ### `progress.js`
-Хаб категорий + экраны графиков (Chart.js). Расчёты веса/пропусков — через `analytics/`.
+Хаб категорий + экраны графиков (Chart.js) + `progress-insights` (карточки инсайтов).  
+Расчёты веса/пропусков/инсайтов — через `analytics/`.
 
 ### `sync.js`
 `SyncManager`: export JSON (включая `body_weight_entries` и `birth_date`), import legacy backup → Supabase.
@@ -523,7 +525,7 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 
 ## 12. PWA и Service Worker
 
-Файл: `sw.js`, cache name: `mygym-v0.7.2` (меняется с релизом).
+Файл: `sw.js`, cache name: `mygym-v0.8.0` (меняется с релизом).
 
 ### Стратегии кэширования
 
@@ -753,4 +755,4 @@ node scripts/add-traps.js
 
 ---
 
-*Последнее обновление: v0.7.2*
+*Последнее обновление: v0.8.0*

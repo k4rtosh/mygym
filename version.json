@@ -1,12 +1,12 @@
 {
-  "version": "0.7.2",
+  "version": "0.8.0",
   "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": [
-    "Откат вредных жестов 0.7: PTR/long-press/swipe больше не ломают web и календарь",
-    "Модалка дня в календаре — по центру, в стиле app-dialog, ниже DEMO-полоски",
-    "Жесты не роняют экран в «Ошибка»; fetch страниц учитывает BASE_PATH",
-    "Главная «Сегодня» и системная Назад сохранены"
+    "Разбор ошибок: карточки сигналов по дневнику (пропуски, объём, простой групп, вес vs зал)",
+    "Domain-слой AnalyticsInsights — без новых таблиц и без жестов",
+    "Пункт в хабе Прогресс → детальный экран с CTA в существующие разделы",
+    "0.7.2: вредные жесты откатили, календарные модалки по центру"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"

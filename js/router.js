@@ -28,7 +28,8 @@ class AppRouter {
       exercises: 'profile',
       'progress-exercises': 'progress',
       'progress-body-weight': 'progress',
-      'progress-missed': 'progress'
+      'progress-missed': 'progress',
+      'progress-insights': 'progress'
     };
     return map[path] || null;
   }
@@ -102,6 +103,9 @@ class AppRouter {
           break;
         case 'progress-missed':
           await ProgressManager.loadMissed();
+          break;
+        case 'progress-insights':
+          await ProgressManager.loadInsights();
           break;
         default:
           await this.navigate('home', {}, { replace: true });
