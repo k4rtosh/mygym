@@ -221,41 +221,9 @@ class CalendarManager {
     container.querySelectorAll('[data-cal-mode]').forEach((btn) => {
       btn.addEventListener('click', () => this.setMode(btn.dataset.calMode));
     });
-
-    this.bindCalendarGestures(container);
   }
 
-  static bindCalendarGestures(container) {
-    if (!window.Gestures) return;
-    if (this._swipeDispose) {
-      this._swipeDispose();
-      this._swipeDispose = null;
-    }
-    if (this._longPressDispose) {
-      this._longPressDispose();
-      this._longPressDispose = null;
-    }
-
-    const swipeTarget = container.querySelector('.cal-grid, .cal-week-list, .cal-year-grid') || container;
-    this._swipeDispose = Gestures.onHorizontalSwipe(swipeTarget, {
-      onSwipeLeft: () => this.shift(1),
-      onSwipeRight: () => this.shift(-1),
-      shouldIgnore: (e) => !!e.target.closest?.('.cal-mode-btn, .modal, button.btn-link')
-    });
-
-    // Long-press day → compact quick plan (tap still opens full day modal).
-    this._longPressDispose = Gestures.onLongPress(
-      container,
-      '.cal-cell:not(.cal-empty), .cal-week-row',
-      (el) => {
-        const dateStr = el.getAttribute('data-date')
-          || (el.getAttribute('onclick') || '').match(/openDay\('([^']+)'\)/)?.[1];
-        if (dateStr) this.quickPlan(dateStr);
-      }
-    );
-  }
-
-  /** Compact plan picker — for long-press / home CTA. */
+  /** Compact plan picker — home «Запланировать» CTA. */
   static async quickPlan(dateStr) {
     let planned = null;
     let templates = [];
@@ -288,6 +256,7 @@ class CalendarManager {
         id: 'cal-quick-plan-modal',
         title: `План · ${Utils.formatDate(dateStr + 'T12:00:00')}`,
         bodyHtml: `
+          <p class="text-muted small mb-3">Быстро поставить шаблон на этот день.</p>
           <label class="form-label" for="quick-plan-template">Шаблон</label>
           <select class="form-select form-select-lg" id="quick-plan-template">${options}</select>
         `,
@@ -467,89 +436,88 @@ class CalendarManager {
       : planned
         ? (dateStr < today ? 'missed' : 'planned')
         : 'empty';
+    const statusLabel = {
+      completed: 'Завершена',
+      missed: 'Пропущена',
+      planned: 'В плане',
+      empty: 'Нет плана'
+    }[status];
 
-    const modal = document.createElement('div');
-    modal.className = 'modal fade';
-    modal.tabIndex = -1;
+    let bodyHtml;
+    let footerHtml;
 
-    let body = '';
     if (completed) {
-      body = `
-        <p>Завершённая тренировка: <strong>${Utils.escapeHtml(completed.templateName)}</strong></p>
-        <button class="btn btn-primary w-100" data-bs-dismiss="modal"
-          onclick="Router.navigate('history-detail', {sessionId: '${completed.id}'})">
-          Открыть
-        </button>
+      bodyHtml = `
+        <div class="cal-day-status cal-day-status-done">${statusLabel}</div>
+        <div class="cal-day-workout-name">${Utils.escapeHtml(completed.templateName || 'Тренировка')}</div>
+        <p class="text-muted small mb-0 mt-2">Можно открыть детали в истории.</p>
+      `;
+      footerHtml = `
+        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Закрыть</button>
+        <button type="button" class="btn btn-primary" id="cal-day-open-history">Открыть</button>
       `;
     } else {
       const options = templates.map((t) =>
         `<option value="${t.id}" ${planned?.template_id === t.id ? 'selected' : ''}>${Utils.escapeHtml(t.name)}</option>`
       ).join('');
-      body = `
-        <p class="text-muted">Статус: ${
-          status === 'missed' ? 'Пропущена' : status === 'planned' ? 'Запланирована' : 'Нет плана'
-        }</p>
-        <label class="form-label">Шаблон (или свободно)</label>
-        <select class="form-select mb-3" id="plan-template">
+      bodyHtml = `
+        <div class="cal-day-status cal-day-status-${status}">${statusLabel}</div>
+        <label class="form-label mt-3" for="plan-template">Шаблон</label>
+        <select class="form-select form-select-lg" id="plan-template">
           <option value="">Свободная тренировка</option>
           ${options}
         </select>
-        <button class="btn btn-primary w-100 mb-2" id="save-plan-btn">Сохранить план</button>
-        ${planned ? '<button class="btn btn-outline-danger w-100 mb-2" id="clear-plan-btn">Убрать план</button>' : ''}
-        ${dateStr === today ? '<button class="btn btn-outline-success w-100" id="start-today-btn">Начать тренировку</button>' : ''}
+      `;
+      footerHtml = `
+        ${planned ? '<button type="button" class="btn btn-outline-danger me-auto" id="clear-plan-btn">Убрать</button>' : ''}
+        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Отмена</button>
+        ${dateStr === today ? '<button type="button" class="btn btn-outline-success" id="start-today-btn">Начать</button>' : ''}
+        <button type="button" class="btn btn-primary" id="save-plan-btn">Сохранить</button>
       `;
     }
 
-    modal.innerHTML = `
-      <div class="modal-dialog">
-        <div class="modal-content bg-dark text-light">
-          <div class="modal-header">
-            <h5 class="modal-title">${Utils.formatDate(dateStr + 'T12:00:00')}</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">${body}</div>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    const bsModal = new bootstrap.Modal(modal);
-    bsModal.show();
+    const { modal, bsModal } = Utils._createAppDialog({
+      id: 'cal-day-modal',
+      title: Utils.formatDate(dateStr + 'T12:00:00'),
+      bodyHtml,
+      footerHtml
+    });
 
-    const saveBtn = modal.querySelector('#save-plan-btn');
-    if (saveBtn) {
-      saveBtn.addEventListener('click', async () => {
-        const tid = modal.querySelector('#plan-template').value || null;
-        try {
-          await Api.upsertPlanned(dateStr, tid);
-          Utils.showToast('План сохранён');
-          bsModal.hide();
-          await this.render();
-        } catch (e) {
-          Utils.showToast(e.message, 'danger');
-        }
-      });
-    }
-    const clearBtn = modal.querySelector('#clear-plan-btn');
-    if (clearBtn) {
-      clearBtn.addEventListener('click', async () => {
-        try {
-          await Api.deletePlanned(dateStr);
-          Utils.showToast('План удалён');
-          bsModal.hide();
-          await this.render();
-        } catch (e) {
-          Utils.showToast(e.message, 'danger');
-        }
-      });
-    }
-    const startBtn = modal.querySelector('#start-today-btn');
-    if (startBtn) {
-      startBtn.addEventListener('click', () => {
+    modal.querySelector('#cal-day-open-history')?.addEventListener('click', () => {
+      bsModal.hide();
+      Router.navigate('history-detail', { sessionId: completed.id });
+    });
+
+    modal.querySelector('#save-plan-btn')?.addEventListener('click', async () => {
+      const tid = modal.querySelector('#plan-template')?.value || null;
+      try {
+        await Api.upsertPlanned(dateStr, tid);
+        Utils.showToast('План сохранён');
         bsModal.hide();
-        Router.navigate('workout');
-      });
-    }
+        await this.render();
+      } catch (e) {
+        Utils.showToast(e.message, 'danger');
+      }
+    });
+
+    modal.querySelector('#clear-plan-btn')?.addEventListener('click', async () => {
+      try {
+        await Api.deletePlanned(dateStr);
+        Utils.showToast('План удалён');
+        bsModal.hide();
+        await this.render();
+      } catch (e) {
+        Utils.showToast(e.message, 'danger');
+      }
+    });
+
+    modal.querySelector('#start-today-btn')?.addEventListener('click', () => {
+      bsModal.hide();
+      Router.navigate('workout');
+    });
+
     modal.addEventListener('hidden.bs.modal', () => modal.remove());
+    bsModal.show();
   }
 }
 

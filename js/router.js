@@ -122,8 +122,6 @@ class AppRouter {
       if (!fromPop && !silent) {
         this.syncHistory(path, params, replace || this.isRootTab(path));
       }
-
-      this.bindPageGestures(path);
     } catch (error) {
       console.error(error);
       this.container.innerHTML = `
@@ -134,6 +132,14 @@ class AppRouter {
         </div>
       `;
       Utils.setShellNav('home');
+      return;
+    }
+
+    // Never let gesture chrome fail a successful page render.
+    try {
+      this.bindPageGestures();
+    } catch (gestureErr) {
+      console.warn('bindPageGestures', gestureErr);
     }
   }
 
@@ -153,27 +159,14 @@ class AppRouter {
     this._historyReady = true;
   }
 
-  bindPageGestures(path) {
+  bindPageGestures() {
+    // Aggressive PTR / swipe-back removed — they degraded web UX.
     if (window.Gestures?.bindPagePullToRefresh) {
       Gestures.bindPagePullToRefresh();
     }
     if (this._swipeBackDispose) {
       this._swipeBackDispose();
       this._swipeBackDispose = null;
-    }
-    const detailPages = [
-      'history-detail',
-      'template-edit',
-      'progress-exercises',
-      'progress-body-weight',
-      'progress-missed',
-      'exercises',
-      'history',
-      'workout'
-    ];
-    if (detailPages.includes(path) && window.Gestures?.onSwipeBack) {
-      const app = document.getElementById('app');
-      this._swipeBackDispose = Gestures.onSwipeBack(app, () => this.handleHardwareBack());
     }
   }
 
@@ -182,7 +175,21 @@ class AppRouter {
     if (this._popHandling) return;
     this._popHandling = true;
     try {
-      if (this.dismissOpenModal()) return;
+      // Browser already popped. If a modal was open, dismiss and re-push
+      // current route so history stays in sync with the UI.
+      if (this.dismissOpenModal()) {
+        const cur = this.stack[this.stack.length - 1] || {
+          path: this.currentPage || 'home',
+          params: this.currentParams || {}
+        };
+        try {
+          history.pushState(
+            { mygym: true, path: cur.path, params: cur.params || {} },
+            ''
+          );
+        } catch { /* ignore */ }
+        return;
+      }
 
       if (state?.mygym && state.path) {
         if (this.stack.length > 1) this.stack.pop();
@@ -272,7 +279,11 @@ class AppRouter {
   }
 
   async fetchPage(url) {
-    const response = await fetch(url);
+    const path = String(url || '').replace(/^\//, '');
+    const resolved = window.MYGYM_CONFIG?.url
+      ? MYGYM_CONFIG.url(path)
+      : url;
+    const response = await fetch(resolved);
     if (!response.ok) throw new Error('Не удалось загрузить страницу');
     return response.text();
   }
