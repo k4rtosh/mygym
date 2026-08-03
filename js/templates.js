@@ -233,24 +233,20 @@ class TemplatesManager {
         ? `${info.category || ''}${info.muscle ? ' · ' + info.muscle.split(',')[0] : ''}`
         : '';
       return `
-        <div class="card mb-2 tpl-ex-card">
+        <div class="card mb-2 tpl-ex-card" data-exercise-id="${Utils.escapeHtml(ex.exerciseId)}" data-index="${index}">
           <div class="card-body py-3">
-            <div class="d-flex gap-2 align-items-start">
-              <div class="tpl-ex-order">
-                <button type="button" class="btn btn-sm btn-ghost-icon move-up-btn" data-index="${index}" ${index === 0 ? 'disabled' : ''} title="Выше">
-                  <i class="bi bi-chevron-up"></i>
-                </button>
-                <span class="tpl-ex-num">${index + 1}</span>
-                <button type="button" class="btn btn-sm btn-ghost-icon move-down-btn" data-index="${index}" ${index === n - 1 ? 'disabled' : ''} title="Ниже">
-                  <i class="bi bi-chevron-down"></i>
-                </button>
-              </div>
+            <div class="d-flex gap-2 align-items-center">
+              <button type="button" class="tpl-ex-handle" data-index="${index}"
+                aria-label="Перетащить упражнение" title="Перетащить">
+                <i class="bi bi-grip-vertical" aria-hidden="true"></i>
+              </button>
               <div class="flex-grow-1 min-w-0">
                 <div class="tpl-ex-name">${Utils.escapeHtml(name)}</div>
                 <div class="tpl-ex-meta">${Utils.escapeHtml(meta)}</div>
               </div>
-              <button class="btn btn-sm btn-outline-danger remove-exercise-btn" data-index="${index}" title="Убрать">
-                <i class="bi bi-x"></i>
+              <button class="btn btn-sm btn-outline-danger remove-exercise-btn" data-index="${index}"
+                title="Убрать" aria-label="Убрать упражнение">
+                <i class="bi bi-x" aria-hidden="true"></i>
               </button>
             </div>
           </div>
@@ -267,29 +263,113 @@ class TemplatesManager {
       });
     });
 
-    container.querySelectorAll('.move-up-btn').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const i = parseInt(btn.dataset.index, 10);
-        if (i <= 0) return;
-        const tmp = template.exercises[i - 1];
-        template.exercises[i - 1] = template.exercises[i];
-        template.exercises[i] = tmp;
-        await this.persistExercises(template);
-        await this.renderTemplateExercises(template);
-      });
-    });
+    this.bindExerciseDrag(container, template);
+  }
 
-    container.querySelectorAll('.move-down-btn').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const i = parseInt(btn.dataset.index, 10);
-        if (i >= template.exercises.length - 1) return;
-        const tmp = template.exercises[i + 1];
-        template.exercises[i + 1] = template.exercises[i];
-        template.exercises[i] = tmp;
+  /** Pointer DnD по ручке — без HTML5 DnD (плохо на мобиле) и без перехвата скролла списка. */
+  static bindExerciseDrag(container, template) {
+    container.querySelectorAll('.tpl-ex-handle').forEach((handle) => {
+      handle.addEventListener('pointerdown', (e) => {
+        if (e.button != null && e.button !== 0) return;
+        const card = handle.closest('.tpl-ex-card');
+        if (!card) return;
+        this.startExerciseDrag(e, handle, card, container, template);
+      });
+
+      handle.addEventListener('keydown', async (e) => {
+        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+        e.preventDefault();
+        const i = parseInt(handle.dataset.index, 10);
+        const j = e.key === 'ArrowUp' ? i - 1 : i + 1;
+        if (j < 0 || j >= template.exercises.length) return;
+        const tmp = template.exercises[i];
+        template.exercises[i] = template.exercises[j];
+        template.exercises[j] = tmp;
         await this.persistExercises(template);
         await this.renderTemplateExercises(template);
+        const next = container.querySelector(`.tpl-ex-handle[data-index="${j}"]`);
+        if (next) next.focus();
       });
     });
+  }
+
+  static startExerciseDrag(e, handle, card, container, template) {
+    e.preventDefault();
+    const pointerId = e.pointerId;
+    try {
+      handle.setPointerCapture(pointerId);
+    } catch (_) { /* ignore */ }
+
+    const startY = e.clientY;
+    let dragging = false;
+    const threshold = 6;
+
+    const cards = () => [...container.querySelectorAll('.tpl-ex-card')];
+
+    const onMove = (ev) => {
+      if (ev.pointerId !== pointerId) return;
+      const dy = ev.clientY - startY;
+      if (!dragging) {
+        if (Math.abs(dy) < threshold) return;
+        dragging = true;
+        card.classList.add('is-dragging');
+        document.body.classList.add('tpl-ex-dragging');
+      }
+
+      const y = ev.clientY;
+      const siblings = cards().filter((c) => c !== card);
+      let insertBefore = null;
+      for (const other of siblings) {
+        const rect = other.getBoundingClientRect();
+        if (y < rect.top + rect.height / 2) {
+          insertBefore = other;
+          break;
+        }
+      }
+      if (insertBefore) {
+        if (card.nextElementSibling !== insertBefore) {
+          container.insertBefore(card, insertBefore);
+        }
+      } else if (card !== container.lastElementChild) {
+        container.appendChild(card);
+      }
+    };
+
+    const finish = async (ev) => {
+      if (ev && ev.pointerId !== pointerId) return;
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', finish);
+      handle.removeEventListener('pointercancel', finish);
+      try {
+        handle.releasePointerCapture(pointerId);
+      } catch (_) { /* ignore */ }
+
+      card.classList.remove('is-dragging');
+      document.body.classList.remove('tpl-ex-dragging');
+      if (!dragging) return;
+
+      const ids = cards().map((c) => c.dataset.exerciseId);
+      const byId = new Map(template.exercises.map((ex) => [ex.exerciseId, ex]));
+      const reordered = ids.map((id) => byId.get(id)).filter(Boolean);
+      if (reordered.length !== template.exercises.length) {
+        await this.renderTemplateExercises(template);
+        return;
+      }
+      const changed = reordered.some((ex, i) => ex.exerciseId !== template.exercises[i].exerciseId);
+      if (!changed) return;
+
+      template.exercises = reordered;
+      try {
+        await this.persistExercises(template);
+      } catch (err) {
+        Utils.showToast(err.message || 'Не удалось сохранить порядок', 'danger');
+      }
+      await this.renderTemplateExercises(template);
+    };
+
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', finish);
+    handle.addEventListener('pointercancel', finish);
   }
 
   static async showExerciseSelector(template) {

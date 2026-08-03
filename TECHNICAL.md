@@ -1,7 +1,7 @@
 # MyGym — технический обзор проекта
 
 > Документ для разработчиков и ИИ-агентов. Описывает актуальную архитектуру, данные, модули, деплой и соглашения.  
-> Версия документа соответствует релизу **0.9.0** (см. `version.json`, `js/config.js`).
+> Версия документа соответствует релизу **1.0.0** (см. `version.json`, `js/config.js`).
 
 ---
 
@@ -427,7 +427,8 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 Смена периода календаря — стрелками; план дня — обычный тап → `openDay` (centered `app-dialog`).
 
 ### `templates.js`
-`TemplatesManager`: CRUD шаблонов, редактор, модальный picker упражнений (фильтры мышца/оборудование).
+`TemplatesManager`: CRUD шаблонов, редактор, модальный picker упражнений (фильтры мышца/оборудование).  
+Порядок упражнений в редакторе — drag-and-drop по ручке (pointer events; стрелки ↑↓ убраны; с клавиатуры — ArrowUp/ArrowDown на ручке).
 
 ### `workout.js`
 `WorkoutManager`:
@@ -532,7 +533,7 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 
 ## 12. PWA и Service Worker
 
-Файл: `sw.js`, cache name: `mygym-v0.9.0` (меняется с релизом).
+Файл: `sw.js`, cache name: `mygym-v1.0.0` (меняется с релизом).
 
 ### Стратегии кэширования
 
@@ -655,7 +656,7 @@ Workflow: `.github/workflows/android-apk.yml`
 | `sw.js` | `CACHE_NAME` (`mygym-vX.Y.Z`) |
 | `android/app/build.gradle` | `versionCode`, `versionName` (через `sync-android-version.js`) |
 
-`versionCode` = `max(major*10000 + minor*100 + patch, 21000)` (например 0.5.0 → 21000, чтобы APK ставился поверх старых 2.x).
+`versionCode` = `21000 + major*1000 + minor*100 + patch` (например 0.9.0 → 21900, 1.0.0 → 22000), чтобы APK ставился поверх старых 2.x и каждый релиз повышал код.
 
 Скрипт синхронизации:
 
