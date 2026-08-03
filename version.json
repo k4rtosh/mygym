@@ -1,12 +1,12 @@
 {
-  "version": "0.9.0",
+  "version": "1.0.0",
   "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": [
-    "Общие empty states: история, шаблоны, упражнения, главная, графики",
-    "A11y: aria-label на назад/иконки, labels на логине, aria-current у tab, календарь",
-    "Копирайт и плюралы; focus-visible и prefers-reduced-motion",
-    "Без изменений в активной тренировке и без жестов"
+    "Релиз 1.0: стабильный дневник тренировок (web + Android)",
+    "Шаблоны: перестановка упражнений drag-and-drop (ручка ⋮⋮ вместо стрелок)",
+    "Feature freeze: без AI-коуча в этом релизе",
+    "Без агрессивных жестов навигации"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"
