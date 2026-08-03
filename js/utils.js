@@ -65,6 +65,39 @@ const Utils = {
       .replace(/'/g, '&#39;');
   },
 
+  /**
+   * Russian plural: Utils.pluralRu(n, ['шаблон', 'шаблона', 'шаблонов'])
+   */
+  pluralRu(n, forms) {
+    const abs = Math.abs(Number(n) || 0);
+    const m10 = abs % 10;
+    const m100 = abs % 100;
+    if (m10 === 1 && m100 !== 11) return forms[0];
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return forms[1];
+    return forms[2];
+  },
+
+  /**
+   * Shared empty state block.
+   * @param {{ icon?: string, title: string, text?: string, ctaHtml?: string }} opts
+   */
+  emptyStateHtml(opts = {}) {
+    const icon = opts.icon || 'bi-inbox';
+    const title = this.escapeHtml(opts.title || 'Пока пусто');
+    const text = opts.text
+      ? `<p class="empty-state-text">${this.escapeHtml(opts.text)}</p>`
+      : '';
+    const cta = opts.ctaHtml || '';
+    return `
+      <div class="empty-state fade-in" role="status">
+        <i class="bi ${this.escapeHtml(icon)} empty-state-icon" aria-hidden="true"></i>
+        <p class="empty-state-title">${title}</p>
+        ${text}
+        ${cta}
+      </div>
+    `;
+  },
+
   debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -89,7 +122,7 @@ const Utils = {
     const toast = document.createElement('div');
     toast.className = `alert alert-${type} alert-dismissible fade show`;
     toast.style.cssText = 'min-width:250px;';
-    toast.innerHTML = `${this.escapeHtml(message)}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    toast.innerHTML = `${this.escapeHtml(message)}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>`;
     toastContainer.appendChild(toast);
 
     setTimeout(() => {
@@ -451,7 +484,10 @@ const Utils = {
     nav.classList.remove('is-hidden');
     document.body.classList.add('has-shell-nav');
     nav.querySelectorAll('[data-nav]').forEach((btn) => {
-      btn.classList.toggle('active', btn.dataset.nav === active);
+      const on = btn.dataset.nav === active;
+      btn.classList.toggle('active', on);
+      if (on) btn.setAttribute('aria-current', 'page');
+      else btn.removeAttribute('aria-current');
     });
   },
 

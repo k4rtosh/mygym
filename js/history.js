@@ -12,12 +12,12 @@ class HistoryManager {
 
     let sessionsHTML;
     if (!sessions.length) {
-      sessionsHTML = `
-        <div class="hist-empty text-center py-5">
-          <i class="bi bi-calendar-x display-1 text-muted"></i>
-          <p class="text-muted mt-3 mb-0">История пуста</p>
-        </div>
-      `;
+      sessionsHTML = Utils.emptyStateHtml({
+        icon: 'bi-calendar-x',
+        title: 'История пока пуста',
+        text: 'Завершённые тренировки появятся здесь — можно открыть детали и сравнить подходы.',
+        ctaHtml: `<button type="button" class="btn btn-primary mt-1" onclick="Router.navigate('workout')">Начать тренировку</button>`
+      });
     } else {
       sessionsHTML = `<div class="hist-list">${sessions.map((session) => {
         const duration = session.duration ? Utils.formatTime(session.duration) : 'Не завершена';
@@ -72,7 +72,7 @@ class HistoryManager {
       return;
     }
     if (!session) {
-      Utils.showToast('Не найдено', 'danger');
+      Utils.showToast('Тренировка не найдена', 'danger');
       Router.navigate('history');
       return;
     }
@@ -134,7 +134,7 @@ class HistoryManager {
     document.getElementById('app').innerHTML = `
       <div class="app-header fade-in">
         <div class="d-flex align-items-center">
-          <button class="btn btn-link text-white me-2" onclick="Router.navigate('history')">
+          <button class="btn btn-link text-white me-2" onclick="Router.navigate('history')" aria-label="Назад к истории">
             <i class="bi bi-arrow-left"></i>
           </button>
           <div class="hist-detail-heading">
@@ -194,7 +194,7 @@ class HistoryManager {
     }))) return;
     try {
       await Api.deleteSession(sessionId);
-      Utils.showToast('Удалено');
+      Utils.showToast('Тренировка удалена');
       Router.navigate('history');
     } catch (e) {
       Utils.showToast(e.message, 'danger');

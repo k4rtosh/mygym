@@ -316,9 +316,12 @@ class CalendarManager {
       cells += `
         <button type="button" class="cal-cell cal-${status} ${isToday ? 'cal-today' : ''}"
           data-date="${dateStr}"
+          aria-label="${day} · ${
+            status === 'completed' ? 'Факт' : status === 'planned' ? 'План' : status === 'missed' ? 'Пропуск' : 'Нет плана'
+          }"
           onclick="CalendarManager.openDay('${dateStr}')">
           <span class="cal-day-num">${day}</span>
-          <span class="cal-dot"></span>
+          <span class="cal-dot" aria-hidden="true"></span>
         </button>
       `;
     }

@@ -1,7 +1,7 @@
 # MyGym — технический обзор проекта
 
 > Документ для разработчиков и ИИ-агентов. Описывает актуальную архитектуру, данные, модули, деплой и соглашения.  
-> Версия документа соответствует релизу **0.8.1** (см. `version.json`, `js/config.js`).
+> Версия документа соответствует релизу **0.9.0** (см. `version.json`, `js/config.js`).
 
 ---
 
@@ -514,6 +514,9 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 
 - **Тема:** тёмная, акцент `#ff5a6a`, шрифты Manrope + Sora
 - **Bootstrap 5** (CDN) + кастом в `css/style.css`
+- **Empty states:** `Utils.emptyStateHtml({ icon, title, text, ctaHtml })` → `.empty-state`
+- **Плюралы:** `Utils.pluralRu(n, ['один','два','пять'])`
+- **A11y:** `:focus-visible`, `aria-current` на shell-nav, `prefers-reduced-motion` для `.fade-in`
 - **Bottom nav** (`#shell-nav`): фиксированная, `body.has-shell-nav` добавляет padding-bottom
 - **Safe area** (Android/iOS notch):
   - CSS-переменные `--safe-top`, `--safe-bottom`
@@ -529,7 +532,7 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 
 ## 12. PWA и Service Worker
 
-Файл: `sw.js`, cache name: `mygym-v0.8.1` (меняется с релизом).
+Файл: `sw.js`, cache name: `mygym-v0.9.0` (меняется с релизом).
 
 ### Стратегии кэширования
 
@@ -759,4 +762,4 @@ node scripts/add-traps.js
 
 ---
 
-*Последнее обновление: v0.8.1*
+*Последнее обновление: v0.9.0*

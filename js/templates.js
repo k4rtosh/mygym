@@ -19,10 +19,12 @@ class TemplatesManager {
           </div>
         </div>
         <div class="container fade-in text-center py-5">
-          <i class="bi bi-collection display-1 text-muted"></i>
-          <p class="text-muted mt-3 mb-1">Пока нет шаблонов</p>
-          <p class="text-muted small mb-4">Собери список упражнений под день тренировки — подходы и повторы пишешь уже в зале.</p>
-          <button class="btn btn-primary" onclick="TemplatesManager.createNew()">Создать первый</button>
+          ${Utils.emptyStateHtml({
+            icon: 'bi-collection',
+            title: 'Пока нет шаблонов',
+            text: 'Собери список упражнений под день тренировки — подходы и повторы пишешь уже в зале.',
+            ctaHtml: `<button type="button" class="btn btn-primary" onclick="TemplatesManager.createNew()">Создать первый</button>`
+          })}
         </div>
       `;
       return;
@@ -39,17 +41,17 @@ class TemplatesManager {
                 <small class="text-muted">${count} ${this.pluralExercises(count)}</small>
               </div>
               <div class="tpl-list-actions" onclick="event.stopPropagation()">
-                <button class="btn btn-sm btn-outline-success" title="Начать"
+                <button class="btn btn-sm btn-outline-success" title="Начать" aria-label="Начать тренировку"
                   onclick="WorkoutManager.startFromTemplate('${t.id}')">
-                  <i class="bi bi-play-fill"></i>
+                  <i class="bi bi-play-fill" aria-hidden="true"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-info" title="Копировать"
+                <button class="btn btn-sm btn-outline-info" title="Копировать" aria-label="Копировать шаблон"
                   onclick="TemplatesManager.duplicateTemplate('${t.id}')">
-                  <i class="bi bi-copy"></i>
+                  <i class="bi bi-copy" aria-hidden="true"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger" title="Удалить"
+                <button class="btn btn-sm btn-outline-danger" title="Удалить" aria-label="Удалить шаблон"
                   onclick="TemplatesManager.deleteTemplate('${t.id}')">
-                  <i class="bi bi-trash"></i>
+                  <i class="bi bi-trash" aria-hidden="true"></i>
                 </button>
               </div>
             </div>
@@ -63,7 +65,7 @@ class TemplatesManager {
         <div class="d-flex justify-content-between align-items-center">
           <div>
             <h4 class="mb-0">Шаблоны</h4>
-            <p class="text-muted small mb-0">${templates.length} шт.</p>
+            <p class="text-muted small mb-0">${templates.length} ${Utils.pluralRu(templates.length, ['шаблон', 'шаблона', 'шаблонов'])}</p>
           </div>
           <button class="btn btn-primary btn-sm" onclick="TemplatesManager.createNew()">
             <i class="bi bi-plus"></i> Новый

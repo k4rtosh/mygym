@@ -28,8 +28,9 @@ class ExercisesManager {
                   <strong>${Utils.escapeHtml(ex.name)}</strong><br>
                   <small class="text-muted">${Utils.escapeHtml(ex.muscle)} · ${Utils.escapeHtml(ex.type)}</small>
                 </div>
-                <button class="btn btn-sm btn-outline-info" onclick="ExercisesManager.showDetails('${Utils.escapeHtml(ex.id)}')">
-                  <i class="bi bi-info-circle"></i>
+                <button class="btn btn-sm btn-outline-info" onclick="ExercisesManager.showDetails('${Utils.escapeHtml(ex.id)}')"
+                  aria-label="Подробнее: ${Utils.escapeHtml(ex.name)}">
+                  <i class="bi bi-info-circle" aria-hidden="true"></i>
                 </button>
               </div>
             </div>
@@ -41,14 +42,22 @@ class ExercisesManager {
     container.innerHTML = `
       <div class="app-header fade-in"><h4>База упражнений</h4></div>
       <div class="container fade-in">
-        <input type="text" class="form-control mb-3" id="exercise-search" placeholder="Поиск...">
-        <div id="exercises-list">${html || '<p class="text-muted">Пусто. Выполни SQL seed в Supabase.</p>'}</div>
+        <label class="visually-hidden" for="exercise-search">Поиск упражнений</label>
+        <input type="search" class="form-control mb-3" id="exercise-search"
+          placeholder="Поиск…" autocomplete="off">
+        <div id="exercises-list">${
+          html || Utils.emptyStateHtml({
+            icon: 'bi-journal-x',
+            title: 'Каталог пуст',
+            text: 'Упражнения подтянутся из облака при следующем входе. В демо они загружаются локально.'
+          })
+        }</div>
       </div>
       ${Utils.bottomNav('profile')}
     `;
 
     const searchInput = document.getElementById('exercise-search');
-    searchInput.addEventListener('input', () => {
+    searchInput?.addEventListener('input', () => {
       const search = searchInput.value.toLowerCase();
       document.querySelectorAll('.exercise-item').forEach((item) => {
         item.style.display = (item.getAttribute('data-name') || '').includes(search) ? '' : 'none';
