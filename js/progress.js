@@ -33,6 +33,7 @@ class ProgressManager {
 
     let weightHint = 'Динамика веса тела';
     let missedHint = 'План vs факт';
+    let insightsHint = 'Сигналы по дневнику';
     try {
       const latest = await Api.getLatestBodyWeight();
       if (latest) weightHint = `Сейчас ${latest.weightKg} кг · ${this.formatShortDate(latest.measuredOn)}`;
@@ -45,14 +46,27 @@ class ProgressManager {
       fromDate.setMonth(fromDate.getMonth() - 5);
       fromDate.setDate(1);
       const from = Utils.toDateStr(fromDate);
-      const [planned, sessions] = await Promise.all([
+      const [planned, sessions, exercises, bodyWeight] = await Promise.all([
         Api.listPlanned(from, to),
-        Api.listSessions()
+        Api.listSessions(),
+        Api.listExercises().catch(() => []),
+        Api.listBodyWeight().catch(() => [])
       ]);
       const summary = AnalyticsAdherence.summarize({ planned, sessions, from, to });
       missedHint = summary.totals.missed
         ? `${summary.totals.missed} пропусков за период`
         : 'Пропусков нет — отличный ритм';
+      if (window.AnalyticsInsights?.buildCards) {
+        const pack = AnalyticsInsights.buildCards({
+          planned,
+          sessions,
+          bodyWeightEntries: bodyWeight,
+          exercises,
+          from,
+          to
+        });
+        insightsHint = pack.hubHint;
+      }
     } catch { /* ignore */ }
 
     container.innerHTML = `
@@ -61,6 +75,14 @@ class ProgressManager {
         <p class="text-muted mb-0 small">Выбери категорию анализа</p>
       </div>
       <div class="container fade-in progress-hub">
+        <button type="button" class="progress-hub-item" data-progress="insights">
+          <div class="progress-hub-icon"><i class="bi bi-lightbulb"></i></div>
+          <div class="progress-hub-text">
+            <div class="progress-hub-title">Разбор ошибок</div>
+            <div class="progress-hub-desc">${Utils.escapeHtml(insightsHint)}</div>
+          </div>
+          <i class="bi bi-chevron-right progress-hub-arrow"></i>
+        </button>
         <button type="button" class="progress-hub-item" data-progress="exercises">
           <div class="progress-hub-icon"><i class="bi bi-bar-chart-line"></i></div>
           <div class="progress-hub-text">
@@ -91,7 +113,8 @@ class ProgressManager {
     container.querySelectorAll('[data-progress]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const key = btn.dataset.progress;
-        if (key === 'exercises') Router.navigate('progress-exercises');
+        if (key === 'insights') Router.navigate('progress-insights');
+        else if (key === 'exercises') Router.navigate('progress-exercises');
         else if (key === 'body-weight') Router.navigate('progress-body-weight');
         else if (key === 'missed') Router.navigate('progress-missed');
       });
@@ -682,6 +705,111 @@ class ProgressManager {
         <span class="badge bg-danger-subtle text-danger">пропуск</span>
       </div>
     `).join('');
+  }
+
+  // ── Insights / "analyze mistakes" ────────────────────
+  static async loadInsights() {
+    this.destroyChart();
+    const container = document.getElementById('app');
+    container.innerHTML = `
+      <div class="app-header fade-in">
+        <div class="d-flex align-items-center">
+          <button class="btn btn-link text-white me-2" onclick="Router.navigate('progress')">
+            <i class="bi bi-arrow-left"></i>
+          </button>
+          <div>
+            <h4 class="mb-0">Разбор ошибок</h4>
+            <p class="text-muted mb-0 small">Сигналы по твоему дневнику</p>
+          </div>
+        </div>
+      </div>
+      <div class="container fade-in">
+        <p class="text-muted small mb-3" id="insights-intro">Считаем…</p>
+        <div id="insights-list" class="insight-list"></div>
+      </div>
+    `;
+
+    const to = Utils.getTodayStr();
+    const fromDate = new Date();
+    fromDate.setMonth(fromDate.getMonth() - 5);
+    fromDate.setDate(1);
+    const from = Utils.toDateStr(fromDate);
+
+    let planned = [];
+    let sessions = [];
+    let exercises = [];
+    let bodyWeight = [];
+    try {
+      [planned, sessions, exercises, bodyWeight] = await Promise.all([
+        Api.listPlanned(from, to),
+        Api.listSessions(),
+        Api.listExercises().catch(() => DB.loadExercisesCache().then((c) => c || [])),
+        Api.listBodyWeight().catch(() => [])
+      ]);
+    } catch (e) {
+      Utils.showToast(e.message || 'Нет данных', 'warning');
+    }
+
+    const pack = window.AnalyticsInsights
+      ? AnalyticsInsights.buildCards({
+        planned,
+        sessions,
+        bodyWeightEntries: bodyWeight,
+        exercises,
+        from,
+        to,
+        today: to
+      })
+      : { cards: [], hubHint: 'Модуль инсайтов не загружен', counts: {} };
+
+    const intro = document.getElementById('insights-intro');
+    const list = document.getElementById('insights-list');
+    if (intro) {
+      intro.textContent = pack.counts?.warn
+        ? `${pack.counts.warn} сигнал(а/ов) стоит разобрать · остальное — контекст`
+        : 'Критических сигналов нет — ниже спокойный разбор по данным';
+    }
+    if (!list) return;
+
+    if (!pack.cards?.length) {
+      list.innerHTML = '<p class="text-muted">Пока нечего показать.</p>';
+      return;
+    }
+
+    const ctaRoute = {
+      missed: 'progress-missed',
+      exercises: 'progress-exercises',
+      'body-weight': 'progress-body-weight'
+    };
+    const ctaLabel = {
+      missed: 'К пропускам',
+      exercises: 'К упражнениям',
+      'body-weight': 'К весу'
+    };
+
+    list.innerHTML = pack.cards.map((card) => `
+      <article class="insight-card insight-${Utils.escapeHtml(card.severity || 'info')}">
+        <div class="insight-card-top">
+          <span class="insight-severity">${card.severity === 'warn' ? 'Сигнал' : card.severity === 'ok' ? 'Ок' : 'Инфо'}</span>
+          ${card.meta ? `<span class="insight-meta">${Utils.escapeHtml(card.meta)}</span>` : ''}
+        </div>
+        <h6 class="insight-title">${Utils.escapeHtml(card.title)}</h6>
+        <p class="insight-body mb-0">${Utils.escapeHtml(card.body)}</p>
+        ${card.cta && ctaRoute[card.cta] ? `
+          <button type="button" class="btn btn-sm btn-outline-light mt-3 insight-cta"
+            data-insight-cta="${Utils.escapeHtml(card.cta)}">
+            ${Utils.escapeHtml(ctaLabel[card.cta] || 'Открыть')}
+          </button>
+        ` : ''}
+      </article>
+    `).join('');
+
+    list.querySelectorAll('[data-insight-cta]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const route = ctaRoute[btn.dataset.insightCta];
+        if (route) Router.navigate(route);
+      });
+    });
   }
 }
 

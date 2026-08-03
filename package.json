@@ -1,6 +1,6 @@
 {
   "name": "mygym",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "description": "MyGym — дневник тренировок (PWA + Android via Capacitor)",
   "main": "app.js",
   "scripts": {

@@ -475,6 +475,7 @@ const Utils = {
       'progress-exercises': 'progress',
       'progress-body-weight': 'progress',
       'progress-missed': 'progress',
+      'progress-insights': 'progress',
       profile: 'profile',
       exercises: 'profile'
     };
