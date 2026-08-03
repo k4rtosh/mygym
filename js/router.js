@@ -252,16 +252,25 @@ class AppRouter {
       if (lastWorkoutInfo && completed.length) {
         const last = completed.sort((a, b) => new Date(b.startTime) - new Date(a.startTime))[0];
         lastWorkoutInfo.innerHTML = `
-          <div class="home-last card">
+          <button type="button" class="home-last card home-last-clickable w-100 text-start"
+            id="last-workout-open" data-session-id="${Utils.escapeHtml(last.id)}">
             <div class="card-body">
-              <div class="home-last-label">Последняя тренировка</div>
-              <div class="home-last-title">${Utils.escapeHtml(last.templateName)}</div>
-              <div class="home-last-meta">
-                ${Utils.formatDate(last.date + 'T12:00:00')} · ${Utils.formatTime(last.duration || 0)}
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <div>
+                  <div class="home-last-label">Последняя тренировка</div>
+                  <div class="home-last-title">${Utils.escapeHtml(last.templateName)}</div>
+                  <div class="home-last-meta">
+                    ${Utils.formatDate(last.date + 'T12:00:00')} · ${Utils.formatTime(last.duration || 0)}
+                  </div>
+                </div>
+                <i class="bi bi-chevron-right home-last-chevron" aria-hidden="true"></i>
               </div>
             </div>
-          </div>
+          </button>
         `;
+        document.getElementById('last-workout-open')?.addEventListener('click', () => {
+          Router.navigate('history-detail', { sessionId: last.id });
+        });
       }
 
       const planned = await Api.getPlannedForDate(today);

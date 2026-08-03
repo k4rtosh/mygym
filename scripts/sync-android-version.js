@@ -8,10 +8,10 @@ const root = path.join(__dirname, '..');
 const versionJson = JSON.parse(fs.readFileSync(path.join(root, 'version.json'), 'utf8'));
 const version = String(versionJson.version || '0.5.0');
 const parts = version.split('.').map((n) => parseInt(n, 10) || 0);
-// Android rejects install-over if versionCode decreases. After the 2.x line we
-// keep a floor so 0.x product versions can still ship APK updates.
-const computed = parts[0] * 10000 + parts[1] * 100 + parts[2];
-const versionCode = Math.max(computed, 21000);
+// Android rejects install-over if versionCode decreases.
+// Product versions are 0.x while we climb to 1.0.0 — keep codes above the old 2.x line
+// and encode minor.patch so each release bumps uniquely: 0.5.1 → 21501.
+const versionCode = 21000 + parts[1] * 100 + parts[2];
 
 const gradlePath = path.join(root, 'android', 'app', 'build.gradle');
 let gradle = fs.readFileSync(gradlePath, 'utf8');
