@@ -1,11 +1,11 @@
 {
-  "version": "0.7.0",
+  "version": "0.7.1",
   "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": [
-    "«Продолжить» на экране упражнения — тот же красный акцент, что «Начать тренировку»",
-    "Жесты: свайп календаря, long-press быстрый план, swipe-back на деталях",
-    "Системная кнопка «Назад» и history stack; pull-to-refresh на списках",
+    "Fix: ошибка remove() при смене экрана из‑за pull-to-refresh",
+    "«Продолжить» — тот же красный акцент, что «Начать тренировку»",
+    "Жесты: свайп календаря, long-press быстрый план, swipe-back, PTR",
     "Главная: блок «Сегодня» + CTA выше статистики"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
