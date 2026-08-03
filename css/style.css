@@ -344,48 +344,69 @@ body .text-primary { color: var(--primary-color) !important; }
   letter-spacing: 0.01em;
 }
 
-.set-row {
-  display: grid;
-  grid-template-columns: 36px 1fr 1fr 36px;
-  gap: 8px;
+/* Sets on exercise screen */
+.set-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.set-card-top {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.04);
-  border-radius: 10px;
-  padding: 8px 10px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .set-number {
   font-weight: 700;
   color: var(--primary-color);
-  text-align: center;
 }
 
-.set-stepper {
+.set-card-fields {
   display: grid;
-  grid-template-columns: 32px 1fr 32px;
-  gap: 4px;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.set-field-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.set-stepper-lg {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  gap: 6px;
   align-items: center;
 }
 
 .set-step-btn {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   line-height: 1;
   font-weight: 700;
+  font-size: 1.2rem;
 }
 
 .set-step-input {
   text-align: center;
   font-variant-numeric: tabular-nums;
-  padding-left: 4px;
-  padding-right: 4px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  height: 44px;
 }
 
 .set-remove-btn {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   padding: 0;
 }
 
@@ -399,7 +420,13 @@ body .text-primary { color: var(--primary-color) !important; }
   min-width: 4.5rem;
 }
 
-/* ── Active workout session mode (0.6) ── */
+.timer-display-inline {
+  text-align: center;
+  min-width: 0;
+  font-size: 1.1rem;
+}
+
+/* ── Active workout session (list + exercise fullscreen) ── */
 body.is-workout-session {
   padding-bottom: 0;
   overflow: hidden;
@@ -409,6 +436,11 @@ body.is-workout-session {
 body.is-workout-session #app {
   height: calc(100vh - var(--safe-top));
   height: calc(100dvh - var(--safe-top));
+}
+
+body.is-demo-mode.is-workout-session #app {
+  height: calc(100vh - var(--safe-top) - 30px);
+  height: calc(100dvh - var(--safe-top) - 30px);
 }
 
 .workout-session {
@@ -428,6 +460,8 @@ body.is-workout-session #app {
   background: linear-gradient(160deg, rgba(21, 28, 42, 0.98), rgba(12, 16, 24, 0.9));
   flex-shrink: 0;
 }
+
+.session-topbar-spacer { width: 64px; }
 
 .session-minimize {
   text-decoration: none !important;
@@ -478,7 +512,7 @@ body.is-workout-session #app {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 8px;
+  padding-bottom: calc(12px + var(--safe-bottom));
 }
 
 .session-container {
@@ -495,112 +529,187 @@ body.is-workout-session #app {
   background: transparent;
 }
 
-.session-dock {
-  flex-shrink: 0;
-  border-top: 1px solid var(--stroke);
-  background: rgba(12, 16, 24, 0.97);
-  backdrop-filter: blur(10px);
-  padding: 12px 14px calc(12px + var(--safe-bottom));
-  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
-}
-
-.session-dock.is-resting {
-  border-top-color: rgba(94, 200, 255, 0.45);
-}
-
-.session-dock-idle {
+.ex-row-list {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+}
+
+.ex-row {
+  display: flex;
+  align-items: center;
   gap: 10px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--stroke);
+  background: var(--card-bg);
+  color: var(--text-color);
+  border-radius: 14px;
+  padding: 14px 12px;
 }
 
-.session-dock-idle-text {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  text-align: center;
+.ex-row-current {
+  border-color: rgba(94, 200, 255, 0.65);
+  box-shadow: inset 3px 0 0 #5ec8ff;
 }
 
-.session-dock-label {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #5ec8ff;
+.ex-row-done {
+  border-color: rgba(61, 220, 151, 0.45);
+  opacity: 0.85;
+}
+
+.ex-row-main { flex: 1; min-width: 0; }
+
+.ex-row-name {
   font-weight: 700;
-}
-
-.session-dock-title {
-  font-family: 'Sora', sans-serif;
-  font-weight: 700;
-  font-size: 1.05rem;
   color: #fff;
   line-height: 1.25;
 }
 
-.session-dock-meta {
+.ex-row-meta {
+  margin-top: 3px;
   font-size: 0.78rem;
   color: var(--text-muted);
-  margin-top: 2px;
 }
 
-.session-dock-timers {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 12px 0;
-}
-
-.session-dock-timer-block {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--stroke);
-  border-radius: 12px;
-  padding: 10px;
-}
-
-.session-dock-timer-label {
-  display: block;
+.ex-row-badge {
+  flex-shrink: 0;
   font-size: 0.68rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.ex-row-badge.now {
+  background: rgba(94, 200, 255, 0.18);
+  color: #5ec8ff;
+}
+
+.ex-row-badge.done {
+  background: rgba(61, 220, 151, 0.16);
+  color: #3ddc97;
+}
+
+.ex-row-badge.wait {
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text-muted);
-  margin-bottom: 6px;
 }
 
-.session-dock-timer-row {
+.ex-row-chevron { color: var(--text-muted); flex-shrink: 0; }
+
+/* Exercise fullscreen */
+.ex-screen-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ex-screen-title {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.25;
+  margin: 4px 0 0;
+}
+
+.ex-sets-panel {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.ex-sets-head {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 8px;
-}
-
-.session-dock-timer-row strong {
-  font-family: 'Sora', monospace;
-  font-variant-numeric: tabular-nums;
-  font-size: 1.15rem;
+  align-items: center;
+  font-weight: 700;
+  margin-bottom: 10px;
   color: #fff;
 }
 
-.session-dock-rest-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: center;
+.ex-screen-dock {
+  flex-shrink: 0;
+  border-top: 1px solid var(--stroke);
+  background: rgba(12, 16, 24, 0.98);
+  padding: 12px 14px calc(16px + var(--safe-bottom));
+  box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.4);
 }
 
-.session-dock-actions {
+.ex-timer-chips {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.ex-chip {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 2px 8px;
+  text-align: left;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.ex-chip-label {
+  grid-column: 1 / -1;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.ex-chip strong {
+  font-family: 'Sora', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.2rem;
+}
+
+.ex-chip-action {
+  align-self: end;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #5ec8ff;
+}
+
+.ex-chip.is-live {
+  border-color: rgba(255, 90, 106, 0.55);
+}
+
+.ex-chip.is-live .ex-chip-action { color: #ff5a6a; }
+
+.ex-chip.is-rest {
+  border-color: rgba(94, 200, 255, 0.55);
+}
+
+.ex-dock-actions {
   display: flex;
   gap: 8px;
 }
 
-.session-rest-progress {
-  margin-top: 8px;
-  background: rgba(255, 255, 255, 0.08);
+.ex-dock-actions .btn {
+  min-height: 46px;
+  font-weight: 650;
+}
+
+.ex-screen-dock .btn-success,
+.ex-screen-dock .btn-outline-warning {
+  min-height: 48px;
+  font-weight: 700;
 }
 
 @media (max-width: 420px) {
-  .session-dock-timers {
-    grid-template-columns: 1fr;
-  }
   .session-minimize span { display: none; }
+  .set-card-fields { grid-template-columns: 1fr; }
 }
 
 .fade-in {
@@ -980,29 +1089,7 @@ small { color: var(--text-muted); }
 .cal-y-stat.plan { color: #5ec8ff; }
 .cal-y-stat.miss { color: #ff5a6a; }
 
-.workout-ex-card {
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.workout-ex-current {
-  border-color: rgba(94, 200, 255, 0.75) !important;
-  box-shadow: inset 3px 0 0 #5ec8ff, 0 0 0 1px rgba(94, 200, 255, 0.2);
-}
-
-.workout-ex-done {
-  border-color: rgba(25, 135, 84, 0.7) !important;
-}
-
-.workout-ex-current-badge {
-  letter-spacing: 0.03em;
-}
-
-.rest-timer-bar {
-  background: var(--card-bg);
-  border: 1px solid var(--stroke);
-  border-radius: var(--border-radius);
-  padding: 12px 14px;
-}
+.rest-timer-bar { display: none; }
 
 .active-resume-card {
   border-color: rgba(255, 193, 7, 0.45);
