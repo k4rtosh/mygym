@@ -221,6 +221,113 @@ class CalendarManager {
     container.querySelectorAll('[data-cal-mode]').forEach((btn) => {
       btn.addEventListener('click', () => this.setMode(btn.dataset.calMode));
     });
+
+    this.bindCalendarGestures(container);
+  }
+
+  static bindCalendarGestures(container) {
+    if (!window.Gestures) return;
+    if (this._swipeDispose) {
+      this._swipeDispose();
+      this._swipeDispose = null;
+    }
+    if (this._longPressDispose) {
+      this._longPressDispose();
+      this._longPressDispose = null;
+    }
+
+    const swipeTarget = container.querySelector('.cal-grid, .cal-week-list, .cal-year-grid') || container;
+    this._swipeDispose = Gestures.onHorizontalSwipe(swipeTarget, {
+      onSwipeLeft: () => this.shift(1),
+      onSwipeRight: () => this.shift(-1),
+      shouldIgnore: (e) => !!e.target.closest?.('.cal-mode-btn, .modal, button.btn-link')
+    });
+
+    // Long-press day → compact quick plan (tap still opens full day modal).
+    this._longPressDispose = Gestures.onLongPress(
+      container,
+      '.cal-cell:not(.cal-empty), .cal-week-row',
+      (el) => {
+        const dateStr = el.getAttribute('data-date')
+          || (el.getAttribute('onclick') || '').match(/openDay\('([^']+)'\)/)?.[1];
+        if (dateStr) this.quickPlan(dateStr);
+      }
+    );
+  }
+
+  /** Compact plan picker — for long-press / home CTA. */
+  static async quickPlan(dateStr) {
+    let planned = null;
+    let templates = [];
+    try {
+      [planned, templates] = await Promise.all([
+        Api.getPlannedForDate(dateStr),
+        Api.listTemplates()
+      ]);
+    } catch (e) {
+      Utils.showToast(e.message, 'danger');
+      return;
+    }
+
+    const options = [
+      `<option value="">Свободная тренировка</option>`,
+      ...templates.map((t) =>
+        `<option value="${t.id}" ${planned?.template_id === t.id ? 'selected' : ''}>${Utils.escapeHtml(t.name)}</option>`
+      )
+    ].join('');
+
+    const result = await new Promise((resolve) => {
+      let settled = false;
+      const finish = (value) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+
+      const { modal, bsModal } = Utils._createAppDialog({
+        id: 'cal-quick-plan-modal',
+        title: `План · ${Utils.formatDate(dateStr + 'T12:00:00')}`,
+        bodyHtml: `
+          <label class="form-label" for="quick-plan-template">Шаблон</label>
+          <select class="form-select form-select-lg" id="quick-plan-template">${options}</select>
+        `,
+        footerHtml: `
+          ${planned ? '<button type="button" class="btn btn-outline-danger me-auto" id="quick-plan-clear">Убрать</button>' : ''}
+          <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Отмена</button>
+          <button type="button" class="btn btn-primary" id="quick-plan-save">Сохранить</button>
+        `
+      });
+
+      modal.querySelector('#quick-plan-save')?.addEventListener('click', () => {
+        const tid = modal.querySelector('#quick-plan-template').value || null;
+        bsModal.hide();
+        finish({ action: 'save', templateId: tid });
+      });
+      modal.querySelector('#quick-plan-clear')?.addEventListener('click', () => {
+        bsModal.hide();
+        finish({ action: 'clear' });
+      });
+      modal.addEventListener('hidden.bs.modal', () => {
+        modal.remove();
+        finish(null);
+      });
+      bsModal.show();
+    });
+
+    if (!result) return;
+    try {
+      if (result.action === 'clear') {
+        await Api.deletePlanned(dateStr);
+        Utils.showToast('План удалён');
+      } else {
+        await Api.upsertPlanned(dateStr, result.templateId);
+        Utils.showToast('План сохранён');
+      }
+      if (Router.currentPage === 'calendar') await this.render();
+      else if (Router.currentPage === 'home') await Router.navigate('home', {}, { replace: true, silent: true });
+    } catch (e) {
+      Utils.showToast(e.message, 'danger');
+    }
   }
 
   static renderMonthBody(plannedMap, completedMap) {
@@ -239,6 +346,7 @@ class CalendarManager {
       const isToday = dateStr === today;
       cells += `
         <button type="button" class="cal-cell cal-${status} ${isToday ? 'cal-today' : ''}"
+          data-date="${dateStr}"
           onclick="CalendarManager.openDay('${dateStr}')">
           <span class="cal-day-num">${day}</span>
           <span class="cal-dot"></span>
@@ -282,6 +390,7 @@ class CalendarManager {
 
       rows.push(`
         <button type="button" class="cal-week-row cal-${status} ${isToday ? 'cal-today' : ''}"
+          data-date="${dateStr}"
           onclick="CalendarManager.openDay('${dateStr}')">
           <div class="cal-week-dow">
             <span class="cal-week-dow-name">${dayNames[i]}</span>

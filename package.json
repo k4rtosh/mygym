@@ -1,6 +1,6 @@
 {
   "name": "mygym",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "MyGym — дневник тренировок (PWA + Android via Capacitor)",
   "main": "app.js",
   "scripts": {
@@ -20,6 +20,7 @@
   "type": "commonjs",
   "dependencies": {
     "@capacitor/android": "^7.4.2",
+    "@capacitor/app": "^7.1.2",
     "@capacitor/core": "^7.4.2",
     "@capacitor/splash-screen": "^7.0.1",
     "@capacitor/status-bar": "^7.0.1",

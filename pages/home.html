@@ -6,9 +6,15 @@
 
 <div class="container fade-in">
   <div id="active-workout-banner"></div>
-  <div id="today-plan"></div>
 
-  <div class="row g-2 mb-4">
+  <section class="home-today mb-4" aria-label="Сегодня">
+    <div id="today-plan"></div>
+    <button class="start-workout-btn mb-0" id="start-workout-btn">
+      <i class="bi bi-lightning-charge-fill"></i> Начать тренировку
+    </button>
+  </section>
+
+  <div class="row g-2 mb-4 home-stats">
     <div class="col-4">
       <div class="card stat-card">
         <div class="stat-value" id="stat-today">0</div>
@@ -28,10 +34,6 @@
       </div>
     </div>
   </div>
-
-  <button class="start-workout-btn mb-3" id="start-workout-btn">
-    <i class="bi bi-lightning-charge-fill"></i> Начать тренировку
-  </button>
 
   <button class="btn btn-ghost w-100 mb-4" onclick="Router.navigate('history')">
     <i class="bi bi-clock-history"></i> История тренировок
