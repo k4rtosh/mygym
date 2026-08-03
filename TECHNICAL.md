@@ -1,7 +1,7 @@
 # MyGym — технический обзор проекта
 
 > Документ для разработчиков и ИИ-агентов. Описывает актуальную архитектуру, данные, модули, деплой и соглашения.  
-> Версия документа соответствует релизу **0.6.2** (см. `version.json`, `js/config.js`).
+> Версия документа соответствует релизу **0.7.0** (см. `version.json`, `js/config.js`).
 
 ---
 
@@ -163,7 +163,8 @@ mygym/
 │   ├── auth.js             # Supabase email/password auth
 │   ├── sync.js             # Экспорт/импорт JSON
 │   ├── onboarding.js       # Первичные данные + вес после тренировки
-│   ├── router.js           # Маршрутизация + init страниц login/home/profile
+│   ├── router.js           # Маршрутизация + history stack + init login/home/profile
+│   ├── gestures.js         # Свайп / long-press / pull-to-refresh (pointer events)
 │   ├── templates.js        # Шаблоны, редактор, picker упражнений
 │   ├── workout.js          # Старт/активная/завершение тренировки
 │   ├── history.js          # Список и деталь истории
@@ -412,8 +413,13 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 Новую аналитику писать **сюда**, UI — тонкая оболочка в `progress.js`.
 
 ### `router.js`
-`AppRouter`: navigate, initLoginPage, initHomePage, initProfilePage.  
+`AppRouter`: navigate, history stack (`pushState`/`popstate`), `handleHardwareBack()`, initLoginPage, initHomePage, initProfilePage.  
+Корневые вкладки shell-nav делают `navigate(..., { replace: true })` — без свайпа между табами.  
 Маршруты прогресса: `progress` (хаб), `progress-exercises`, `progress-body-weight`, `progress-missed`.
+
+### `gestures.js`
+Лёгкие жесты на pointer events (без библиотек): горизонтальный свайп, long-press, pull-to-refresh, swipe-back.  
+Календарь: свайп периода + long-press → `CalendarManager.quickPlan`. Списки: PTR → перезагрузка экрана.
 
 ### `templates.js`
 `TemplatesManager`: CRUD шаблонов, редактор, модальный picker упражнений (фильтры мышца/оборудование).
@@ -427,7 +433,8 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 - После `finishWorkout` — запрос веса через `Onboarding`
 
 ### `history.js`, `calendar.js`, `exercises.js`
-Соответствующие экраны. Календарь использует `AnalyticsAdherence.dayStatus` при наличии.
+Соответствующие экраны. Календарь использует `AnalyticsAdherence.dayStatus` при наличии.  
+`CalendarManager.quickPlan(dateStr)` — компактный план (long-press / CTA на главной).
 
 ### `progress.js`
 Хаб категорий + экраны графиков (Chart.js). Расчёты веса/пропусков — через `analytics/`.
@@ -516,7 +523,7 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 
 ## 12. PWA и Service Worker
 
-Файл: `sw.js`, cache name: `mygym-v0.6.2` (меняется с релизом).
+Файл: `sw.js`, cache name: `mygym-v0.7.0` (меняется с релизом).
 
 ### Стратегии кэширования
 
@@ -746,4 +753,4 @@ node scripts/add-traps.js
 
 ---
 
-*Последнее обновление: v0.6.0*
+*Последнее обновление: v0.7.0*

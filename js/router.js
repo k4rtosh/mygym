@@ -1,7 +1,12 @@
 class AppRouter {
   constructor() {
     this.currentPage = null;
+    this.currentParams = {};
     this.appContainer = null;
+    /** @type {Array<{path:string, params:object}>} */
+    this.stack = [];
+    this._popHandling = false;
+    this._historyReady = false;
   }
 
   get container() {
@@ -9,7 +14,34 @@ class AppRouter {
     return this.appContainer;
   }
 
-  async navigate(path, params = {}) {
+  isRootTab(path) {
+    return ['home', 'calendar', 'templates', 'progress', 'profile', 'login'].includes(path);
+  }
+
+  parentOf(path) {
+    const map = {
+      'history-detail': 'history',
+      history: 'home',
+      'template-edit': 'templates',
+      workout: 'home',
+      'active-workout': 'home',
+      exercises: 'profile',
+      'progress-exercises': 'progress',
+      'progress-body-weight': 'progress',
+      'progress-missed': 'progress'
+    };
+    return map[path] || null;
+  }
+
+  /**
+   * @param {string} path
+   * @param {object} [params]
+   * @param {{ replace?: boolean, fromPop?: boolean, silent?: boolean }} [options]
+   * silent: re-enter same page without pushing history (PTR).
+   */
+  async navigate(path, params = {}, options = {}) {
+    const { replace = false, fromPop = false, silent = false } = options;
+
     if (path !== 'login' && !Auth.isLoggedIn()) {
       path = 'login';
     }
@@ -72,10 +104,11 @@ class AppRouter {
           await ProgressManager.loadMissed();
           break;
         default:
-          await this.navigate('home');
+          await this.navigate('home', {}, { replace: true });
           return;
       }
       this.currentPage = path;
+      this.currentParams = { ...params };
       document.body.classList.toggle('is-workout-session', path === 'active-workout');
       if (path === 'login' || path === 'active-workout') {
         Utils.hideShellNav();
@@ -85,6 +118,12 @@ class AppRouter {
       if (window.DemoMode?.isDemo?.() && window.showDemoBadge) {
         window.showDemoBadge();
       }
+
+      if (!fromPop && !silent) {
+        this.syncHistory(path, params, replace || this.isRootTab(path));
+      }
+
+      this.bindPageGestures(path);
     } catch (error) {
       console.error(error);
       this.container.innerHTML = `
@@ -96,6 +135,140 @@ class AppRouter {
       `;
       Utils.setShellNav('home');
     }
+  }
+
+  syncHistory(path, params, replace) {
+    const entry = { path, params: { ...params } };
+    if (replace || !this.stack.length) {
+      this.stack = [entry];
+      try {
+        history.replaceState({ mygym: true, path, params: entry.params }, '');
+      } catch { /* ignore */ }
+    } else {
+      this.stack.push(entry);
+      try {
+        history.pushState({ mygym: true, path, params: entry.params }, '');
+      } catch { /* ignore */ }
+    }
+    this._historyReady = true;
+  }
+
+  bindPageGestures(path) {
+    if (window.Gestures?.bindPagePullToRefresh) {
+      Gestures.bindPagePullToRefresh();
+    }
+    if (this._swipeBackDispose) {
+      this._swipeBackDispose();
+      this._swipeBackDispose = null;
+    }
+    const detailPages = [
+      'history-detail',
+      'template-edit',
+      'progress-exercises',
+      'progress-body-weight',
+      'progress-missed',
+      'exercises',
+      'history',
+      'workout'
+    ];
+    if (detailPages.includes(path) && window.Gestures?.onSwipeBack) {
+      const app = document.getElementById('app');
+      this._swipeBackDispose = Gestures.onSwipeBack(app, () => this.handleHardwareBack());
+    }
+  }
+
+  /** Browser / Android WebView history pop. */
+  async handlePopState(state) {
+    if (this._popHandling) return;
+    this._popHandling = true;
+    try {
+      if (this.dismissOpenModal()) return;
+
+      if (state?.mygym && state.path) {
+        if (this.stack.length > 1) this.stack.pop();
+        await this.navigate(state.path, state.params || {}, { fromPop: true });
+        return;
+      }
+
+      if (this.stack.length > 1) {
+        this.stack.pop();
+        const prev = this.stack[this.stack.length - 1];
+        await this.navigate(prev.path, prev.params || {}, { fromPop: true });
+        return;
+      }
+
+      const parent = this.parentOf(this.currentPage);
+      if (parent) {
+        await this.navigate(parent, {}, { replace: true });
+      }
+    } finally {
+      this._popHandling = false;
+    }
+  }
+
+  dismissOpenModal() {
+    const open = document.querySelector('.modal.show');
+    if (!open) return false;
+    const inst = bootstrap.Modal.getInstance(open);
+    if (inst) inst.hide();
+    else open.querySelector('[data-bs-dismiss="modal"]')?.click();
+    return true;
+  }
+
+  /**
+   * System back / swipe-back.
+   * @returns {boolean} true if handled
+   */
+  handleHardwareBack() {
+    if (this.dismissOpenModal()) return true;
+
+    if (this.currentPage === 'active-workout' && window.WorkoutManager) {
+      if (WorkoutManager.sessionView === 'exercise') {
+        WorkoutManager.backToList();
+        return true;
+      }
+      WorkoutManager.minimizeSession();
+      return true;
+    }
+
+    if (this.stack.length > 1) {
+      history.back();
+      return true;
+    }
+
+    const parent = this.parentOf(this.currentPage);
+    if (parent && parent !== this.currentPage) {
+      this.navigate(parent, {}, { replace: true });
+      return true;
+    }
+
+    if (this.currentPage && this.currentPage !== 'home' && this.currentPage !== 'login') {
+      this.navigate('home', {}, { replace: true });
+      return true;
+    }
+    return false;
+  }
+
+  back() {
+    return this.handleHardwareBack();
+  }
+
+  initHistory() {
+    window.addEventListener('popstate', (e) => {
+      this.handlePopState(e.state);
+    });
+
+    // Capacitor App plugin (if installed) — otherwise WebView uses history.
+    try {
+      const App = window.Capacitor?.Plugins?.App;
+      if (App?.addListener) {
+        App.addListener('backButton', () => {
+          if (!this.handleHardwareBack()) {
+            App.exitApp?.();
+          }
+        });
+      }
+    } catch { /* optional */ }
   }
 
   async fetchPage(url) {
@@ -279,13 +452,37 @@ class AppRouter {
       if (planSlot) {
         if (planned) {
           planSlot.innerHTML = `
-            <div class="plan-chip">
-              <i class="bi bi-calendar-check"></i>
-              Сегодня в плане: <strong>${Utils.escapeHtml(planned.templates?.name || 'свободная')}</strong>
+            <div class="home-today-card has-plan">
+              <div class="home-today-label">Сегодня в плане</div>
+              <div class="home-today-title">${Utils.escapeHtml(planned.templates?.name || 'Свободная тренировка')}</div>
+              <button type="button" class="btn btn-link btn-sm text-muted px-0 home-today-link"
+                onclick="Router.navigate('calendar')">
+                Открыть календарь
+              </button>
             </div>
           `;
         } else {
-          planSlot.innerHTML = '';
+          planSlot.innerHTML = `
+            <div class="home-today-card">
+              <div class="home-today-label">Сегодня</div>
+              <div class="home-today-title">Плана пока нет</div>
+              <div class="home-today-actions">
+                <button type="button" class="btn btn-outline-light btn-sm" id="home-plan-today-btn">
+                  <i class="bi bi-calendar-plus"></i> Запланировать
+                </button>
+                <button type="button" class="btn btn-link btn-sm text-muted" onclick="Router.navigate('calendar')">
+                  Календарь
+                </button>
+              </div>
+            </div>
+          `;
+          document.getElementById('home-plan-today-btn')?.addEventListener('click', () => {
+            if (window.CalendarManager?.quickPlan) {
+              CalendarManager.quickPlan(today);
+            } else {
+              Router.navigate('calendar');
+            }
+          });
         }
       }
     } catch (e) {
@@ -422,3 +619,4 @@ class AppRouter {
 
 const Router = new AppRouter();
 window.Router = Router;
+Router.initHistory();

@@ -46,6 +46,7 @@
   <script src="js/sync.js"></script>
   <script src="js/onboarding.js"></script>
   <script src="js/router.js"></script>
+  <script src="js/gestures.js"></script>
   <script src="js/templates.js"></script>
   <script src="js/workout.js"></script>
   <script src="js/history.js"></script>
@@ -60,7 +61,8 @@
     document.getElementById('shell-nav')?.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-nav]');
       if (!btn || !window.Router) return;
-      Router.navigate(btn.dataset.nav);
+      // Tabs replace stack — no swipe between bottom-nav destinations.
+      Router.navigate(btn.dataset.nav, {}, { replace: true });
     });
     (function registerServiceWorker() {
       const cfg = window.MYGYM_CONFIG || {};

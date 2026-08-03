@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mygym-v0.6.2';
+const CACHE_NAME = 'mygym-v0.7.0';
 
 function detectSwBasePath() {
   try {
@@ -27,6 +27,7 @@ const APP_SHELL = [
   shell('/js/auth.js'),
   shell('/js/sync.js'),
   shell('/js/router.js'),
+  shell('/js/gestures.js'),
   shell('/js/templates.js'),
   shell('/js/workout.js'),
   shell('/js/history.js'),
