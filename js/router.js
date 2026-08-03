@@ -76,7 +76,8 @@ class AppRouter {
           return;
       }
       this.currentPage = path;
-      if (path === 'login') {
+      document.body.classList.toggle('is-workout-session', path === 'active-workout');
+      if (path === 'login' || path === 'active-workout') {
         Utils.hideShellNav();
       } else {
         Utils.setShellNav(Utils.shellNavActiveFor(path));
