@@ -70,6 +70,7 @@ class AuthManager {
     this.currentUser = null;
     this.profile = null;
     await DB.clearActiveSession();
+    if (window.Api?.invalidateCache) Api.invalidateCache('all');
   }
 
   getCurrentUser() {

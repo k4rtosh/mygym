@@ -16,16 +16,31 @@
     sessionStorage.removeItem(DEMO_KEY);
   }
 
-  // LocalStorage-backed CRUD
+  // LocalStorage-backed CRUD with in-memory parse cache (avoids JSON.parse on every list*)
+  const _mem = Object.create(null);
+
   function store(key) { return STORE_PREFIX + key; }
 
   function getAll(key) {
-    try { return JSON.parse(localStorage.getItem(store(key)) || '[]'); }
-    catch { return []; }
+    if (_mem[key] !== undefined) return _mem[key];
+    try {
+      _mem[key] = JSON.parse(localStorage.getItem(store(key)) || '[]');
+    } catch {
+      _mem[key] = [];
+    }
+    return _mem[key];
   }
 
   function putAll(key, arr) {
+    _mem[key] = arr;
     localStorage.setItem(store(key), JSON.stringify(arr));
+  }
+
+  function clearMem(key) {
+    if (key) delete _mem[key];
+    else {
+      Object.keys(_mem).forEach((k) => delete _mem[k]);
+    }
   }
 
   function defaultDemoProfile() {
@@ -129,14 +144,19 @@
     },
 
     async listExercises() {
+      if (this._exercisesMem) return this._exercisesMem.slice();
       const cached = await DB.loadExercisesCache();
-      if (Array.isArray(cached) && cached.length) return cached;
+      if (Array.isArray(cached) && cached.length) {
+        this._exercisesMem = cached;
+        return cached.slice();
+      }
       const resp = await fetch('data/exercises.json');
       if (!resp.ok) return [];
       const raw = await resp.json();
       const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.exercises) ? raw.exercises : []);
       await DB.cacheExercises(list);
-      return list;
+      this._exercisesMem = list;
+      return list.slice();
     },
 
     async listTemplates() {
@@ -326,6 +346,7 @@
   // Activate demo shims — mutate existing Api/Auth in place
   // (scripts use lexical `const Api`/`const Auth`, not window.Api/Auth)
   function activateDemoShims() {
+    clearMem();
     if (window.Api) {
       Object.keys(DemoApi).forEach((key) => {
         const val = DemoApi[key];

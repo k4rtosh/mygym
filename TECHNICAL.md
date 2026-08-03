@@ -1,7 +1,7 @@
 # MyGym — технический обзор проекта
 
 > Документ для разработчиков и ИИ-агентов. Описывает актуальную архитектуру, данные, модули, деплой и соглашения.  
-> Версия документа соответствует релизу **1.1.0** (см. `version.json`, `js/config.js`).
+> Версия документа соответствует релизу **1.1.1** (см. `version.json`, `js/config.js`).
 
 ---
 
@@ -396,7 +396,9 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 ### `api.js`
 Все операции с облаком: профиль, шаблоны, сессии, план, вес тела, прогресс.  
 `normalizeSession()` / `normalizeBodyWeight()` приводят snake_case БД к camelCase приложения.  
-`birth_date` в профиле **set-once** (повторная смена запрещена на уровне Api).
+`birth_date` в профиле **set-once** (повторная смена запрещена на уровне Api).  
+In-memory кеш списков (~45 с; каталог упражнений ~10 мин) + dedupe inflight; `invalidateCache` на мутациях.  
+`requireUser()` берёт `Auth.currentUser` / `auth.getSession()` (локально), без `getUser()` на каждый вызов.
 
 ### `auth.js`
 `AuthManager`: signUp, signIn, logout, getCurrentUser, init (restore session).
