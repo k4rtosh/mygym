@@ -1,12 +1,12 @@
 {
-  "version": "0.7.1",
+  "version": "0.7.2",
   "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": [
-    "Fix: ошибка remove() при смене экрана из‑за pull-to-refresh",
-    "«Продолжить» — тот же красный акцент, что «Начать тренировку»",
-    "Жесты: свайп календаря, long-press быстрый план, swipe-back, PTR",
-    "Главная: блок «Сегодня» + CTA выше статистики"
+    "Откат вредных жестов 0.7: PTR/long-press/swipe больше не ломают web и календарь",
+    "Модалка дня в календаре — по центру, в стиле app-dialog, ниже DEMO-полоски",
+    "Жесты не роняют экран в «Ошибка»; fetch страниц учитывает BASE_PATH",
+    "Главная «Сегодня» и системная Назад сохранены"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"

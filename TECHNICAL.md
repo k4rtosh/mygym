@@ -1,7 +1,7 @@
 # MyGym — технический обзор проекта
 
 > Документ для разработчиков и ИИ-агентов. Описывает актуальную архитектуру, данные, модули, деплой и соглашения.  
-> Версия документа соответствует релизу **0.7.1** (см. `version.json`, `js/config.js`).
+> Версия документа соответствует релизу **0.7.2** (см. `version.json`, `js/config.js`).
 
 ---
 
@@ -418,8 +418,8 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 Маршруты прогресса: `progress` (хаб), `progress-exercises`, `progress-body-weight`, `progress-missed`.
 
 ### `gestures.js`
-Лёгкие жесты на pointer events (без библиотек): горизонтальный свайп, long-press, pull-to-refresh, swipe-back.  
-Календарь: свайп периода + long-press → `CalendarManager.quickPlan`. Списки: PTR → перезагрузка экрана.
+Консервативный модуль: агрессивный PTR / long-press / swipe-back с web убраны (ломали скролл и календарь).  
+Смена периода календаря — стрелками; план дня — обычный тап → `openDay` (centered `app-dialog`).
 
 ### `templates.js`
 `TemplatesManager`: CRUD шаблонов, редактор, модальный picker упражнений (фильтры мышца/оборудование).
@@ -523,7 +523,7 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 
 ## 12. PWA и Service Worker
 
-Файл: `sw.js`, cache name: `mygym-v0.7.1` (меняется с релизом).
+Файл: `sw.js`, cache name: `mygym-v0.7.2` (меняется с релизом).
 
 ### Стратегии кэширования
 
@@ -753,4 +753,4 @@ node scripts/add-traps.js
 
 ---
 
-*Последнее обновление: v0.7.1*
+*Последнее обновление: v0.7.2*
