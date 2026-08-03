@@ -14,6 +14,13 @@ class AppRouter {
       path = 'login';
     }
 
+    // Leaving active workout must kill intervals — otherwise they become orphans
+    if (this.currentPage === 'active-workout' && path !== 'active-workout') {
+      if (window.WorkoutManager?.pauseSessionUi) {
+        WorkoutManager.pauseSessionUi();
+      }
+    }
+
     try {
       switch (path) {
         case 'login':

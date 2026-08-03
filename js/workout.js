@@ -8,6 +8,53 @@ class WorkoutManager {
   static lastPersistAt = 0;
   static restInterval = null;
   static restSecondsLeft = 0;
+  /** Index of the exercise the user is currently working on (null = none). */
+  static activeExerciseIndex = null;
+
+  /** Clear all exercise setIntervals (must run before wiping exerciseTimers). */
+  static stopAllExerciseTimers() {
+    Object.keys(this.exerciseTimers || {}).forEach((key) => {
+      const id = this.exerciseTimers[key];
+      if (id) clearInterval(id);
+    });
+    this.exerciseTimers = {};
+  }
+
+  /**
+   * Pause UI timers when leaving the active-workout screen.
+   * Keeps the draft; intervals must not survive navigation.
+   */
+  static pauseSessionUi() {
+    // Flush running exercise times into the session draft
+    if (this.currentSession?.exercises) {
+      this.currentSession.exercises.forEach((ex, index) => {
+        if (this.exerciseTimes[index] != null) {
+          ex.exerciseTime = this.exerciseTimes[index];
+        }
+      });
+      DB.saveActiveSession(this.currentSession).catch(() => {});
+    }
+    this.stopAllExerciseTimers();
+    this.stopTimer();
+    this.stopRestTimer();
+  }
+
+  static focusExercise(index) {
+    if (index == null || index < 0) return;
+    const ex = this.currentSession?.exercises?.[index];
+    if (!ex || ex.completed) return;
+    this.activeExerciseIndex = index;
+  }
+
+  static syncActiveExerciseHighlight() {
+    const cards = document.querySelectorAll('[data-exercise-index]');
+    cards.forEach((card) => {
+      const idx = Number(card.dataset.exerciseIndex);
+      const isCurrent = idx === this.activeExerciseIndex && !card.classList.contains('workout-ex-done');
+      card.classList.toggle('workout-ex-current', isCurrent);
+      card.classList.toggle('border-info', isCurrent);
+    });
+  }
 
   static async guardActiveWorkout() {
     const draft = await DB.loadActiveSession();
@@ -241,11 +288,19 @@ class WorkoutManager {
       return;
     }
 
+    // Kill any orphaned intervals from a previous visit to this screen
+    this.pauseSessionUi();
+
     this.currentSession = session;
     this.startTime = new Date(session.startTime);
     this.exerciseTimers = {};
     this.exerciseTimes = {};
     this.restoreExerciseTimers();
+
+    // Focus first incomplete exercise so the list has a clear "current" marker
+    const firstOpen = (session.exercises || []).findIndex((ex) => !ex.completed);
+    this.activeExerciseIndex = firstOpen >= 0 ? firstOpen : null;
+
     this.startTimer();
     await this.renderActiveWorkout();
   }
@@ -284,34 +339,43 @@ class WorkoutManager {
         const isBw = info && info.type === 'Собственный вес';
         const timerValue = this.exerciseTimes[index] || ex.exerciseTime || 0;
         const running = !!this.exerciseTimers[index];
+        const isCurrent = !ex.completed && this.activeExerciseIndex === index;
+        const stateClass = ex.completed
+          ? 'border-success workout-ex-done'
+          : (isCurrent ? 'border-info workout-ex-current' : '');
+        const stateBadge = ex.completed
+          ? '<span class="badge bg-success">Готово</span>'
+          : (isCurrent ? '<span class="badge bg-info workout-ex-current-badge">Сейчас</span>' : '');
         return `
-          <div class="card mb-3 ${ex.completed ? 'border-success' : ''}">
+          <div class="card mb-3 workout-ex-card ${stateClass}" data-exercise-index="${index}"
+            onclick="WorkoutManager.onExerciseCardClick(${index}, event)">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
               <h6 class="mb-0">${Utils.escapeHtml(name)}</h6>
               <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-info" id="exercise-timer-${index}">${Utils.formatTime(timerValue)}</span>
+                ${stateBadge}
+                <span class="badge bg-secondary" id="exercise-timer-${index}">${Utils.formatTime(timerValue)}</span>
                 ${!ex.completed ? `
                   <button class="btn btn-sm ${running ? 'btn-danger' : 'btn-outline-primary'}"
                     id="timer-btn-${index}"
-                    onclick="WorkoutManager.toggleExerciseTimer(${index})">
+                    onclick="event.stopPropagation(); WorkoutManager.toggleExerciseTimer(${index})">
                     ${running ? 'Стоп' : 'Старт'}
                   </button>
-                ` : `<span class="badge bg-success">Готово</span>`}
+                ` : ''}
               </div>
             </div>
             <div class="card-body">
               ${isBw ? '<div class="small text-muted mb-2">Доп. вес · 0 = без довеска</div>' : ''}
               <div class="sets-list" id="sets-${index}">${this.renderSets(ex, index, { isBodyweight: isBw })}</div>
               <div class="mt-2 d-flex flex-wrap gap-2">
-                <button class="btn btn-sm btn-outline-light" onclick="WorkoutManager.addSet(${index})">
+                <button class="btn btn-sm btn-outline-light" onclick="event.stopPropagation(); WorkoutManager.addSet(${index})">
                   <i class="bi bi-plus"></i> Подход
                 </button>
-                <button class="btn btn-sm btn-outline-info" onclick="WorkoutManager.repeatLastSet(${index})">
+                <button class="btn btn-sm btn-outline-info" onclick="event.stopPropagation(); WorkoutManager.repeatLastSet(${index})">
                   <i class="bi bi-arrow-repeat"></i> Как прошлый
                 </button>
                 ${!ex.completed
-                  ? `<button class="btn btn-sm btn-outline-success" onclick="WorkoutManager.completeExercise(${index})">Завершить</button>`
-                  : `<button class="btn btn-sm btn-outline-warning" onclick="WorkoutManager.uncompleteExercise(${index})">Вернуть</button>`}
+                  ? `<button class="btn btn-sm btn-outline-success" onclick="event.stopPropagation(); WorkoutManager.completeExercise(${index})">Завершить</button>`
+                  : `<button class="btn btn-sm btn-outline-warning" onclick="event.stopPropagation(); WorkoutManager.uncompleteExercise(${index})">Вернуть</button>`}
               </div>
             </div>
           </div>
@@ -419,7 +483,16 @@ class WorkoutManager {
     await this.renderActiveWorkout();
   }
 
+  static onExerciseCardClick(exerciseIndex, event) {
+    // Ignore clicks on inputs/buttons (they stopPropagation themselves); keep as safety net
+    const tag = event?.target?.tagName;
+    if (tag === 'INPUT' || tag === 'BUTTON' || event?.target?.closest?.('button, input')) return;
+    this.focusExercise(exerciseIndex);
+    this.syncActiveExerciseHighlight();
+  }
+
   static addSet(exerciseIndex) {
+    this.focusExercise(exerciseIndex);
     const ex = this.currentSession.exercises[exerciseIndex];
     if (!ex.sets) ex.sets = [];
     const last = ex.sets[ex.sets.length - 1];
@@ -432,6 +505,7 @@ class WorkoutManager {
   }
 
   static repeatLastSet(exerciseIndex) {
+    this.focusExercise(exerciseIndex);
     const ex = this.currentSession.exercises[exerciseIndex];
     if (!ex.sets) ex.sets = [];
     const last = ex.sets[ex.sets.length - 1];
@@ -455,10 +529,23 @@ class WorkoutManager {
   }
 
   static completeExercise(exerciseIndex) {
-    if (this.exerciseTimers[exerciseIndex]) this.stopExerciseTimer(exerciseIndex);
+    // Always clear — even if the map entry was lost after a resume bug
+    if (this.exerciseTimers[exerciseIndex]) {
+      clearInterval(this.exerciseTimers[exerciseIndex]);
+      this.exerciseTimers[exerciseIndex] = null;
+    }
+    this.stopExerciseTimer(exerciseIndex);
     const exercise = this.currentSession.exercises[exerciseIndex];
     exercise.exerciseTime = this.exerciseTimes[exerciseIndex] || exercise.exerciseTime || 0;
     exercise.completed = true;
+
+    if (this.activeExerciseIndex === exerciseIndex) {
+      const next = (this.currentSession.exercises || []).findIndex(
+        (ex, i) => i > exerciseIndex && !ex.completed
+      );
+      const fallback = (this.currentSession.exercises || []).findIndex((ex) => !ex.completed);
+      this.activeExerciseIndex = next >= 0 ? next : (fallback >= 0 ? fallback : null);
+    }
     this.saveAndRender();
   }
 
@@ -466,6 +553,7 @@ class WorkoutManager {
     const exercise = this.currentSession.exercises[exerciseIndex];
     exercise.completed = false;
     this.exerciseTimes[exerciseIndex] = exercise.exerciseTime || 0;
+    this.focusExercise(exerciseIndex);
     this.saveAndRender();
   }
 
@@ -594,9 +682,10 @@ class WorkoutManager {
     Utils.showToast('Тренировка сохранена в облаке');
 
     const finishedSession = this.currentSession;
+    this.stopAllExerciseTimers();
     this.currentSession = null;
-    this.exerciseTimers = {};
     this.exerciseTimes = {};
+    this.activeExerciseIndex = null;
 
     if (window.Onboarding?.promptBodyWeightAfterWorkout) {
       await Onboarding.promptBodyWeightAfterWorkout(finishedSession);
@@ -606,6 +695,8 @@ class WorkoutManager {
   }
 
   static startExerciseTimer(exerciseIndex) {
+    this.focusExercise(exerciseIndex);
+    this.syncActiveExerciseHighlight();
     if (this.exerciseTimers[exerciseIndex]) clearInterval(this.exerciseTimers[exerciseIndex]);
     if (!this.exerciseTimes[exerciseIndex]) this.exerciseTimes[exerciseIndex] = 0;
     this.exerciseTimers[exerciseIndex] = setInterval(() => {

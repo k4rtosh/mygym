@@ -1,7 +1,7 @@
 # MyGym — технический обзор проекта
 
 > Документ для разработчиков и ИИ-агентов. Описывает актуальную архитектуру, данные, модули, деплой и соглашения.  
-> Версия документа соответствует релизу **2.6.0** (см. `version.json`, `js/config.js`).
+> Версия документа соответствует релизу **0.5.0** (см. `version.json`, `js/config.js`).
 
 ---
 
@@ -516,7 +516,7 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 
 ## 12. PWA и Service Worker
 
-Файл: `sw.js`, cache name: `mygym-v2.6.0` (меняется с релизом).
+Файл: `sw.js`, cache name: `mygym-v0.5.0` (меняется с релизом).
 
 ### Стратегии кэширования
 
@@ -545,7 +545,7 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 
 ```json
 {
-  "version": "2.6.0",
+  "version": "0.5.0",
   "minVersion": "2.5.0",
   "critical": false,
   "releaseNotes": ["..."],
@@ -639,7 +639,7 @@ Workflow: `.github/workflows/android-apk.yml`
 | `sw.js` | `CACHE_NAME` (`mygym-vX.Y.Z`) |
 | `android/app/build.gradle` | `versionCode`, `versionName` (через `sync-android-version.js`) |
 
-`versionCode` = `major*10000 + minor*100 + patch` (например 2.6.0 → 20600).
+`versionCode` = `max(major*10000 + minor*100 + patch, 21000)` (например 0.5.0 → 21000, чтобы APK ставился поверх старых 2.x).
 
 Скрипт синхронизации:
 
@@ -746,4 +746,4 @@ node scripts/add-traps.js
 
 ---
 
-*Последнее обновление: v2.6.0*
+*Последнее обновление: v0.5.0*

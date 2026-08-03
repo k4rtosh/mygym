@@ -586,6 +586,156 @@ small { color: var(--text-muted); }
 .cal-swatch.cal-completed { background: #198754; }
 .cal-swatch.cal-missed { background: #dc3545; }
 
+.cal-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--stroke);
+}
+
+.cal-mode-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-radius: 10px;
+  padding: 8px 6px;
+}
+
+.cal-mode-btn.active {
+  background: rgba(94, 200, 255, 0.16);
+  color: #fff;
+}
+
+.cal-week-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cal-week-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--stroke);
+  background: var(--card-bg);
+  color: var(--text-color);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.cal-week-row.cal-planned { border-color: rgba(94, 200, 255, 0.45); }
+.cal-week-row.cal-completed { border-color: rgba(25, 135, 84, 0.55); }
+.cal-week-row.cal-missed { border-color: rgba(220, 53, 69, 0.55); }
+
+.cal-week-dow {
+  width: 44px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.cal-week-dow-name {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.cal-week-dow-num {
+  display: block;
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: #fff;
+}
+
+.cal-week-main { flex: 1; min-width: 0; }
+
+.cal-week-title {
+  font-weight: 650;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-week-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.cal-week-status {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.cal-week-row.cal-completed .cal-week-status { color: #3ddc97; }
+.cal-week-row.cal-planned .cal-week-status { color: #5ec8ff; }
+.cal-week-row.cal-missed .cal-week-status { color: #ff5a6a; }
+
+.cal-year-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.cal-year-month {
+  border: 1px solid var(--stroke);
+  background: var(--card-bg);
+  color: var(--text-color);
+  border-radius: 14px;
+  padding: 14px 10px;
+  text-align: center;
+}
+
+.cal-year-month-name {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.cal-year-month-stats {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.cal-y-stat.done { color: #3ddc97; }
+.cal-y-stat.plan { color: #5ec8ff; }
+.cal-y-stat.miss { color: #ff5a6a; }
+
+.workout-ex-card {
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.workout-ex-current {
+  border-color: rgba(94, 200, 255, 0.75) !important;
+  box-shadow: inset 3px 0 0 #5ec8ff, 0 0 0 1px rgba(94, 200, 255, 0.2);
+}
+
+.workout-ex-done {
+  border-color: rgba(25, 135, 84, 0.7) !important;
+}
+
+.workout-ex-current-badge {
+  letter-spacing: 0.03em;
+}
+
 .rest-timer-bar {
   background: var(--card-bg);
   border: 1px solid var(--stroke);
