@@ -33,7 +33,7 @@ class ProgressManager {
 
     let weightHint = 'Динамика веса тела';
     let missedHint = 'План vs факт';
-    let insightsHint = 'Сигналы по дневнику';
+    let insightsHint = 'По твоему дневнику';
     try {
       const latest = await Api.getLatestBodyWeight();
       if (latest) weightHint = `Сейчас ${latest.weightKg} кг · ${this.formatShortDate(latest.measuredOn)}`;
@@ -78,7 +78,7 @@ class ProgressManager {
         <button type="button" class="progress-hub-item" data-progress="insights">
           <div class="progress-hub-icon"><i class="bi bi-lightbulb"></i></div>
           <div class="progress-hub-text">
-            <div class="progress-hub-title">Разбор ошибок</div>
+            <div class="progress-hub-title">Подсказки</div>
             <div class="progress-hub-desc">${Utils.escapeHtml(insightsHint)}</div>
           </div>
           <i class="bi bi-chevron-right progress-hub-arrow"></i>
@@ -718,13 +718,12 @@ class ProgressManager {
             <i class="bi bi-arrow-left"></i>
           </button>
           <div>
-            <h4 class="mb-0">Разбор ошибок</h4>
-            <p class="text-muted mb-0 small">Сигналы по твоему дневнику</p>
+            <h4 class="mb-0">Подсказки</h4>
+            <p class="text-muted mb-0 small">По твоему дневнику</p>
           </div>
         </div>
       </div>
       <div class="container fade-in">
-        <p class="text-muted small mb-3" id="insights-intro">Считаем…</p>
         <div id="insights-list" class="insight-list"></div>
       </div>
     `;
@@ -760,15 +759,9 @@ class ProgressManager {
         to,
         today: to
       })
-      : { cards: [], hubHint: 'Модуль инсайтов не загружен', counts: {} };
+      : { cards: [], hubHint: 'Модуль подсказок не загружен', counts: {} };
 
-    const intro = document.getElementById('insights-intro');
     const list = document.getElementById('insights-list');
-    if (intro) {
-      intro.textContent = pack.counts?.warn
-        ? `${pack.counts.warn} сигнал(а/ов) стоит разобрать · остальное — контекст`
-        : 'Критических сигналов нет — ниже спокойный разбор по данным';
-    }
     if (!list) return;
 
     if (!pack.cards?.length) {
@@ -787,10 +780,16 @@ class ProgressManager {
       'body-weight': 'К весу'
     };
 
+    const severityLabel = {
+      warn: 'Замечание',
+      ok: 'Норма',
+      info: 'Заметка'
+    };
+
     list.innerHTML = pack.cards.map((card) => `
       <article class="insight-card insight-${Utils.escapeHtml(card.severity || 'info')}">
         <div class="insight-card-top">
-          <span class="insight-severity">${card.severity === 'warn' ? 'Сигнал' : card.severity === 'ok' ? 'Ок' : 'Инфо'}</span>
+          <span class="insight-severity">${severityLabel[card.severity] || 'Заметка'}</span>
           ${card.meta ? `<span class="insight-meta">${Utils.escapeHtml(card.meta)}</span>` : ''}
         </div>
         <h6 class="insight-title">${Utils.escapeHtml(card.title)}</h6>
