@@ -13,7 +13,7 @@ android {
         applicationId "com.k4rtosh.mygym"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 21000
+        versionCode 21501
         versionName "0.5.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
