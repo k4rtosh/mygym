@@ -54,17 +54,18 @@
     const c = String(raw || '').trim();
     if (!c) return 'Прочее';
     const lower = c.toLowerCase();
-    if (lower.includes('груд')) return 'Грудь';
+    if (lower.includes('груд')) return 'Грудные';
     if (lower.includes('спин')) return 'Спина';
     if (lower.includes('ног') || lower.includes('квадр') || lower.includes('бедр')) return 'Ноги';
     if (lower.includes('плеч') || lower.includes('дельт')) return 'Плечи';
     if (lower.includes('бицеп')) return 'Бицепс';
     if (lower.includes('трицеп')) return 'Трицепс';
     if (lower.includes('пресс') || lower.includes('кор')) return 'Кор';
-    if (lower.includes('ягодиц')) return 'Ягодицы';
-    if (lower.includes('икр')) return 'Икры';
+    if (lower.includes('ягодиц')) return 'Ноги';
+    if (lower.includes('икр')) return 'Ноги';
     if (lower.includes('трапец')) return 'Трапеции';
     if (lower.includes('предплеч')) return 'Предплечья';
+    if (lower.includes('кардио')) return 'Кардио';
     return c.split(/[\s/·,—-]+/)[0] || c;
   }
 
@@ -120,7 +121,7 @@
         id: 'miss-streak',
         severity: 'info',
         title: 'План ещё не задан',
-        body: 'Без плана в календаре нечего «пропускать». Поставь шаблон на ближайшие дни — тогда разбор станет точнее.',
+        body: 'Без плана в календаре сложно заметить срывы ритма. Поставь шаблон на ближайшие дни — подсказки станут полезнее.',
         meta: null,
         cta: 'missed'
       };
@@ -369,7 +370,7 @@
         id: 'weight-vs-training',
         severity: 'warn',
         title: 'Вес растёт, зал реже',
-        body: `Средний вес ~+${formatKg(weightDelta)} кг при меньшей частоте тренировок (${recentSessions} vs ${priorSessions} за ~2 нед.). Это не диагноз — просто сигнал сверить питание и план.`,
+        body: `Средний вес ~+${formatKg(weightDelta)} кг при меньшей частоте тренировок (${recentSessions} vs ${priorSessions} за ~2 нед.). Не диагноз — просто повод сверить питание и план.`,
         meta: `Сейчас ${formatKg(bw.last.weightKg)} кг`,
         cta: 'body-weight'
       };
@@ -435,11 +436,13 @@
     cards.sort((a, b) => (severityRank[a.severity] ?? 9) - (severityRank[b.severity] ?? 9));
 
     const warns = cards.filter((c) => c.severity === 'warn');
-    const hubHint = warns.length
-      ? `${warns.length} сигнал(а/ов) · ${warns[0].title}`
-      : cards.some((c) => c.severity === 'ok')
-        ? 'Критических сигналов нет'
-        : 'Накапливаем данные для разбора';
+    const hubHint = warns.length === 1
+      ? warns[0].title
+      : warns.length > 1
+        ? `Есть ${warns.length} замечания`
+        : cards.some((c) => c.severity === 'ok')
+          ? 'Пока всё ровно'
+          : 'Пока собираем картину';
 
     return {
       cards,

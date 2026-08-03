@@ -1,12 +1,12 @@
 {
-  "version": "0.8.0",
+  "version": "0.8.1",
   "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": [
-    "Разбор ошибок: карточки сигналов по дневнику (пропуски, объём, простой групп, вес vs зал)",
-    "Domain-слой AnalyticsInsights — без новых таблиц и без жестов",
-    "Пункт в хабе Прогресс → детальный экран с CTA в существующие разделы",
-    "0.7.2: вредные жесты откатили, календарные модалки по центру"
+    "Раздел «Подсказки» вместо «Разбор ошибок» — мягкий тон, без кричащего заголовка",
+    "Каталог упражнений: 10 категорий, минус дубли, правки и type для фармерской",
+    "Копирайт карточек спокойнее: Замечание / Заметка / Норма",
+    "Для prod: перезалей seed_exercises.sql в Supabase после мержа"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"
