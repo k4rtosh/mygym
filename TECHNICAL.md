@@ -1,7 +1,7 @@
 # MyGym — технический обзор проекта
 
 > Документ для разработчиков и ИИ-агентов. Описывает актуальную архитектуру, данные, модули, деплой и соглашения.  
-> Версия документа соответствует релизу **1.0.0** (см. `version.json`, `js/config.js`).
+> Версия документа соответствует релизу **1.1.0** (см. `version.json`, `js/config.js`).
 
 ---
 
@@ -157,7 +157,9 @@ mygym/
 │   ├── analytics/          # Domain-слой (pure, без DOM)
 │   │   ├── profileMetrics.js
 │   │   ├── bodyWeight.js
-│   │   └── adherence.js
+│   │   ├── adherence.js
+│   │   ├── insights.js
+│   │   └── coach.js        # Rule-коуч поверх insights
 │   ├── demoMode.js         # Demo API/Auth shim (localStorage)
 │   ├── api.js              # Supabase CRUD
 │   ├── auth.js             # Supabase email/password auth
@@ -367,7 +369,8 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 - Кнопка **«Войти в демо»** или логин `test` / `test`
 - `DemoMode.enableDemo()` + `activateDemoShims()`
 - Данные: **localStorage** (не Supabase)
-- При первом входе: `DemoData.seed()` — автозаполнение шаблонов и истории
+- При входе: `DemoData.seed()` если нет сессий **или** `needsReseed()` (версия сида `SEED_VERSION`)
+- Сид v2: ~12 недель, 5 шаблонов (жим/плечи, спина, ноги, руки, кор), ~29 сессий, планы с серией пропусков, рост веса — сценарии для коуча
 - Визуальный индикатор: полоска `DEMO · локальные данные` под статус-баром (`body.is-demo-mode`)
 - Logout: очистка demo-сессии + `location.reload()` (возврат prod Api/Auth)
 
@@ -414,13 +417,16 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 - `AnalyticsBodyWeight` — нормализация и сводка серии веса
 - `AnalyticsAdherence` — план/факт/пропуски по диапазону дат
 - `AnalyticsInsights` — карточки «разбор ошибок» (`buildCards`)
+- `AnalyticsCoach` — rule-коуч (`buildPack`): фокус, частота, плато, следующий шаг + insights; без LLM
 
-Новую аналитику писать **сюда**, UI — тонкая оболочка в `progress.js`.
+Новую аналитику писать **сюда**, UI — тонкая оболочка в `progress.js` (хаб «Коуч», маршрут `progress-insights`).
+
+LLM-коуч (позже): Supabase Edge Function, тот же контракт карточек — не свободный чат.
 
 ### `router.js`
 `AppRouter`: navigate, history stack (`pushState`/`popstate`), `handleHardwareBack()`, initLoginPage, initHomePage, initProfilePage.  
 Корневые вкладки shell-nav делают `navigate(..., { replace: true })` — без свайпа между табами.  
-Маршруты прогресса: `progress` (хаб), `progress-exercises`, `progress-body-weight`, `progress-missed`.
+Маршруты прогресса: `progress` (хаб), `progress-insights` (Коуч), `progress-exercises`, `progress-body-weight`, `progress-missed`.
 
 ### `gestures.js`
 Консервативный модуль: агрессивный PTR / long-press / swipe-back с web убраны (ломали скролл и календарь).  
@@ -450,7 +456,7 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 `SyncManager`: export JSON (включая `body_weight_entries` и `birth_date`), import legacy backup → Supabase.
 
 ### `demoData.js`
-`DemoData.seed()` / `clearAll()` — тестовый набор (шаблоны, сессии, планы, вес, birth_date).
+`DemoData.seed()` / `clearAll()` / `needsReseed()` — расширенный тестовый набор (шаблоны, сессии, планы, вес, birth_date; `SEED_VERSION`).
 
 ### `updateCheck.js`
 См. [раздел 13](#13-система-обновлений).
@@ -763,4 +769,4 @@ node scripts/add-traps.js
 
 ---
 
-*Последнее обновление: v0.9.0*
+*Последнее обновление: v1.1.0*
