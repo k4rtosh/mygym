@@ -1,12 +1,12 @@
 {
-  "version": "1.1.0",
+  "version": "1.1.1",
   "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": [
-    "Коуч (правила): фокус, частота, плато, следующий шаг поверх подсказок",
-    "Демо: больше истории (~12 нед., 5 шаблонов, пропуски и сценарии для коуча)",
-    "Экран Прогресс → Коуч; авто-ресид демо при новой версии сида",
-    "Без LLM — ИИ-коуч позже через Edge Function"
+    "Плавнее UI: кеш sessions/templates/exercises/planned (~45с), без auth.getUser на каждый запрос",
+    "Тренировка: +/− веса/повторов без полной перерисовки экрана",
+    "Демо: mem-кеш localStorage — меньше JSON.parse при навигации",
+    "Коуч по-прежнему считается только при открытии экрана"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"

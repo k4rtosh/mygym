@@ -729,22 +729,40 @@ class WorkoutManager {
     if (field === 'reps') next = Math.max(0, Math.round(next));
     else next = Math.max(0, Math.round(next * 10) / 10);
     set[field] = next;
+    this.syncSetInput(exerciseIndex, setIndex, field, next);
     this.persist(false);
-    this.saveAndRender();
+  }
+
+  /** Update one set input without rebuilding the whole exercise screen. */
+  static syncSetInput(exerciseIndex, setIndex, field, value) {
+    const list = document.getElementById(`sets-${exerciseIndex}`);
+    if (!list) return;
+    const card = list.children[setIndex];
+    if (!card) return;
+    const inputs = card.querySelectorAll('.set-step-input');
+    const input = field === 'weight' ? inputs[0] : inputs[1];
+    if (input) input.value = this.formatSetField(value);
   }
 
   static async persist(forceCloud = false) {
     if (!this.currentSession) return;
-    await DB.saveActiveSession(this.currentSession);
-    const now = Date.now();
-    if (forceCloud || now - this.lastPersistAt > 8000) {
-      this.lastPersistAt = now;
-      try {
-        await Api.upsertSession(this.currentSession);
-      } catch (e) {
-        console.warn('Cloud persist failed', e);
+    // Serialize saves so rapid nudges don't pile up IndexedDB writes
+    const run = async () => {
+      await DB.saveActiveSession(this.currentSession);
+      const now = Date.now();
+      if (forceCloud || now - this.lastPersistAt > 8000) {
+        this.lastPersistAt = now;
+        try {
+          await Api.upsertSession(this.currentSession);
+        } catch (e) {
+          console.warn('Cloud persist failed', e);
+        }
       }
-    }
+    };
+    this._persistChain = (this._persistChain || Promise.resolve())
+      .then(run, run)
+      .catch((e) => console.warn('persist', e));
+    return this._persistChain;
   }
 
   static async saveAndRender() {
