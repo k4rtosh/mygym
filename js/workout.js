@@ -8,8 +8,11 @@ class WorkoutManager {
   static lastPersistAt = 0;
   static restInterval = null;
   static restSecondsLeft = 0;
+  static restTotalSeconds = 0;
+  static restPreset = 90;
   /** Index of the exercise the user is currently working on (null = none). */
   static activeExerciseIndex = null;
+  static exerciseCatalog = [];
 
   /** Clear all exercise setIntervals (must run before wiping exerciseTimers). */
   static stopAllExerciseTimers() {
@@ -305,12 +308,54 @@ class WorkoutManager {
     await this.renderActiveWorkout();
   }
 
+  static minimizeSession() {
+    this.pauseSessionUi();
+    Utils.showToast('Тренировка свёрнута — продолжить можно с главной', 'info');
+    Router.navigate('home');
+  }
+
+  static getActiveExercise() {
+    const idx = this.activeExerciseIndex;
+    if (idx == null || !this.currentSession?.exercises?.[idx]) return null;
+    return { index: idx, exercise: this.currentSession.exercises[idx] };
+  }
+
+  static exerciseName(exerciseId) {
+    const info = this.exerciseCatalog.find((e) => e.id === exerciseId);
+    return info ? info.name : 'Упражнение';
+  }
+
+  static isBodyweight(exerciseId) {
+    const info = this.exerciseCatalog.find((e) => e.id === exerciseId);
+    return !!(info && info.type === 'Собственный вес');
+  }
+
+  static sessionProgress() {
+    const list = this.currentSession?.exercises || [];
+    const done = list.filter((ex) => ex.completed).length;
+    return { done, total: list.length };
+  }
+
+  static buzz() {
+    try {
+      const haptics = window.Capacitor?.Plugins?.Haptics;
+      if (haptics?.impact) {
+        haptics.impact({ style: 'MEDIUM' });
+        return;
+      }
+    } catch { /* optional */ }
+    try {
+      if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+    } catch { /* ignore */ }
+  }
+
   static startTimer() {
     if (this.timerInterval) clearInterval(this.timerInterval);
     this.timerInterval = setInterval(() => {
       this.elapsedSeconds = Math.floor((Date.now() - this.startTime.getTime()) / 1000);
-      const el = document.getElementById('timer-display');
-      if (el) el.textContent = Utils.formatTime(this.elapsedSeconds);
+      document.querySelectorAll('#timer-display, #session-dock-timer').forEach((el) => {
+        el.textContent = Utils.formatTime(this.elapsedSeconds);
+      });
     }, 1000);
   }
 
@@ -321,22 +366,116 @@ class WorkoutManager {
     }
   }
 
+  static renderFocusDock() {
+    const active = this.getActiveExercise();
+    const resting = this.restSecondsLeft > 0 && !!this.restInterval;
+    const presets = [60, 90, 120];
+
+    if (!active) {
+      return `
+        <div class="session-dock session-dock-idle">
+          <div class="session-dock-idle-text">Выбери упражнение в списке или добавь новое</div>
+          <div class="session-dock-rest-presets">
+            ${presets.map((s) => `
+              <button type="button" class="btn btn-sm ${this.restPreset === s ? 'btn-info' : 'btn-outline-light'}"
+                onclick="WorkoutManager.setRestPreset(${s})">${s}с</button>
+            `).join('')}
+            <button type="button" class="btn btn-sm btn-outline-info" onclick="WorkoutManager.startRestTimer()">
+              Отдых
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    const { index, exercise } = active;
+    const name = this.exerciseName(exercise.exerciseId);
+    const running = !!this.exerciseTimers[index];
+    const timerValue = this.exerciseTimes[index] || exercise.exerciseTime || 0;
+    const setsCount = exercise.sets?.length || 0;
+    const restPct = this.restTotalSeconds
+      ? Math.max(0, (this.restSecondsLeft / this.restTotalSeconds) * 100)
+      : 0;
+
+    return `
+      <div class="session-dock ${resting ? 'is-resting' : ''}">
+        <div class="session-dock-top">
+          <div class="session-dock-label">Сейчас</div>
+          <div class="session-dock-title">${Utils.escapeHtml(name)}</div>
+          <div class="session-dock-meta">${setsCount} ${this.pluralSets(setsCount)}</div>
+        </div>
+        <div class="session-dock-timers">
+          <div class="session-dock-timer-block">
+            <span class="session-dock-timer-label">Упражнение</span>
+            <div class="session-dock-timer-row">
+              <strong id="dock-ex-timer">${Utils.formatTime(timerValue)}</strong>
+              <button type="button" class="btn btn-sm ${running ? 'btn-danger' : 'btn-outline-light'}"
+                id="dock-ex-timer-btn"
+                onclick="WorkoutManager.toggleExerciseTimer(${index})">
+                ${running ? 'Стоп' : 'Старт'}
+              </button>
+            </div>
+          </div>
+          <div class="session-dock-timer-block">
+            <span class="session-dock-timer-label">Отдых</span>
+            <div class="session-dock-timer-row">
+              <strong id="rest-timer-value">${Utils.formatTime(resting ? this.restSecondsLeft : this.restPreset)}</strong>
+              ${resting
+                ? `<button type="button" class="btn btn-sm btn-outline-light" onclick="WorkoutManager.stopRestTimer()">Сброс</button>`
+                : `<button type="button" class="btn btn-sm btn-outline-info" onclick="WorkoutManager.startRestTimer()">Старт</button>`}
+            </div>
+            <div class="progress session-rest-progress ${resting ? '' : 'd-none'}" id="rest-timer-bar-progress" style="height:4px">
+              <div class="progress-bar bg-info" id="rest-timer-progress" style="width:${restPct}%"></div>
+            </div>
+            <div class="session-dock-rest-presets mt-2">
+              ${presets.map((s) => `
+                <button type="button" class="btn btn-sm ${this.restPreset === s ? 'btn-info' : 'btn-outline-light'}"
+                  onclick="WorkoutManager.setRestPreset(${s})">${s}с</button>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="session-dock-actions">
+          <button type="button" class="btn btn-outline-light flex-fill" onclick="WorkoutManager.addSet(${index})">
+            <i class="bi bi-plus-lg"></i> Подход
+          </button>
+          <button type="button" class="btn btn-outline-info flex-fill" onclick="WorkoutManager.repeatLastSet(${index})">
+            <i class="bi bi-arrow-repeat"></i>
+          </button>
+          <button type="button" class="btn btn-success flex-fill" onclick="WorkoutManager.completeExercise(${index})">
+            Готово
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  static pluralSets(n) {
+    const m10 = n % 10;
+    const m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return 'подход';
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'подхода';
+    return 'подходов';
+  }
+
   static async renderActiveWorkout() {
     if (!this.currentSession) return;
     const container = document.getElementById('app');
-    let allExercises = [];
     try {
-      allExercises = await Api.listExercises();
-      await DB.cacheExercises(allExercises);
+      this.exerciseCatalog = await Api.listExercises();
+      await DB.cacheExercises(this.exerciseCatalog);
     } catch (_) {
-      allExercises = (await DB.loadExercisesCache()) || [];
+      this.exerciseCatalog = (await DB.loadExercisesCache()) || [];
     }
+
+    const { done, total } = this.sessionProgress();
+    const progressPct = total ? Math.round((done / total) * 100) : 0;
+    const resting = this.restSecondsLeft > 0 && !!this.restInterval;
 
     const exercisesHTML = (this.currentSession.exercises || []).length
       ? this.currentSession.exercises.map((ex, index) => {
-        const info = allExercises.find((e) => e.id === ex.exerciseId);
-        const name = info ? info.name : 'Неизвестное упражнение';
-        const isBw = info && info.type === 'Собственный вес';
+        const name = this.exerciseName(ex.exerciseId);
+        const isBw = this.isBodyweight(ex.exerciseId);
         const timerValue = this.exerciseTimes[index] || ex.exerciseTime || 0;
         const running = !!this.exerciseTimers[index];
         const isCurrent = !ex.completed && this.activeExerciseIndex === index;
@@ -381,87 +520,120 @@ class WorkoutManager {
           </div>
         `;
       }).join('')
-      : '<div class="text-center py-4"><p class="text-muted">Нет упражнений</p></div>';
+      : '<div class="text-center py-4 session-empty"><p class="text-muted mb-3">Нет упражнений</p></div>';
 
     container.innerHTML = `
-      <div class="app-header fade-in">
-        <div class="d-flex justify-content-between align-items-center">
-          <h4 class="mb-0">${Utils.escapeHtml(this.currentSession.templateName || 'Тренировка')}</h4>
+      <div class="workout-session fade-in">
+        <div class="session-topbar">
+          <button type="button" class="btn btn-link text-white session-minimize" onclick="WorkoutManager.minimizeSession()" title="Свернуть">
+            <i class="bi bi-chevron-down"></i>
+            <span>Свернуть</span>
+          </button>
+          <div class="session-topbar-center">
+            <div class="session-title">${Utils.escapeHtml(this.currentSession.templateName || 'Тренировка')}</div>
+            <div class="session-progress-text">${done}/${total || 0} упр. · ${progressPct}%</div>
+          </div>
           <div class="timer-display" id="timer-display">00:00</div>
         </div>
+        <div class="session-progress-track" aria-hidden="true">
+          <div class="session-progress-fill" style="width:${progressPct}%"></div>
+        </div>
+
+        <div class="session-scroll">
+          <div class="container session-container">
+            <div class="session-notes card mb-3">
+              <div class="card-body py-2">
+                <input type="text" class="form-control form-control-sm border-0 bg-transparent px-0"
+                  id="session-notes"
+                  value="${Utils.escapeHtml(this.currentSession.notes || '')}"
+                  placeholder="Заметка к тренировке…">
+              </div>
+            </div>
+            ${exercisesHTML}
+            <button class="btn btn-outline-light w-100 mt-2" onclick="WorkoutManager.showAddExerciseModal()">
+              <i class="bi bi-plus-circle"></i> Добавить упражнение
+            </button>
+            <div class="mt-3 mb-2">
+              <button class="btn btn-danger w-100" id="finish-workout-btn">
+                <i class="bi bi-flag"></i> Завершить тренировку
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="rest-timer-bar" class="${resting ? '' : 'd-none'}" aria-hidden="true"></div>
+        ${this.renderFocusDock()}
       </div>
-      <div class="container fade-in">
-        <div class="card mb-3">
-          <div class="card-body">
-            <label class="form-label">Заметка</label>
-            <input type="text" class="form-control" id="session-notes"
-              value="${Utils.escapeHtml(this.currentSession.notes || '')}"
-              placeholder="Как прошло...">
-          </div>
-        </div>
-        <div id="rest-timer-bar" class="rest-timer-bar d-none mb-3">
-          <div class="d-flex justify-content-between align-items-center">
-            <span>Отдых</span>
-            <strong id="rest-timer-value">01:30</strong>
-            <button class="btn btn-sm btn-outline-light" onclick="WorkoutManager.stopRestTimer()">Стоп</button>
-          </div>
-          <div class="progress mt-2" style="height:6px">
-            <div class="progress-bar bg-info" id="rest-timer-progress" style="width:100%"></div>
-          </div>
-        </div>
-        ${exercisesHTML}
-        <button class="btn btn-outline-primary w-100 mt-3" onclick="WorkoutManager.showAddExerciseModal()">
-          <i class="bi bi-plus-circle"></i> Добавить упражнение
-        </button>
-        <div class="mt-4 mb-4">
-          <button class="btn btn-danger w-100" id="finish-workout-btn">
-            <i class="bi bi-flag"></i> Завершить тренировку
-          </button>
-        </div>
-      </div>
-      ${Utils.bottomNav('home')}
     `;
 
-    document.getElementById('finish-workout-btn').addEventListener('click', () => this.finishWorkout());
-    document.getElementById('session-notes').addEventListener('change', async (e) => {
+    document.getElementById('finish-workout-btn')?.addEventListener('click', () => this.finishWorkout());
+    document.getElementById('session-notes')?.addEventListener('change', async (e) => {
       this.currentSession.notes = e.target.value;
       await this.persist(true);
     });
 
     this.elapsedSeconds = Math.floor((Date.now() - this.startTime.getTime()) / 1000);
-    const timerDisplay = document.getElementById('timer-display');
-    if (timerDisplay) timerDisplay.textContent = Utils.formatTime(this.elapsedSeconds);
+    document.querySelectorAll('#timer-display').forEach((el) => {
+      el.textContent = Utils.formatTime(this.elapsedSeconds);
+    });
+
+    // Keep sticky current card in view after re-render
+    const currentCard = container.querySelector('.workout-ex-current');
+    if (currentCard) {
+      requestAnimationFrame(() => {
+        currentCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      });
+    }
   }
 
   static renderSets(exercise, exerciseIndex, options = {}) {
     if (!exercise.sets || !exercise.sets.length) {
-      return '<p class="text-muted small mb-0">Нет подходов</p>';
+      return '<p class="text-muted small mb-0">Нет подходов — добавь из панели ниже</p>';
     }
-    const weightPh = options.isBodyweight ? 'доп. кг' : 'кг';
+    const weightPh = options.isBodyweight ? 'доп.' : 'кг';
+    const weightStep = options.isBodyweight ? 1 : 2.5;
     return exercise.sets.map((set, setIndex) => `
       <div class="set-row">
-        <div class="row align-items-center g-1">
-          <div class="col-2"><span class="set-number">#${setIndex + 1}</span></div>
-          <div class="col-4">
-            <input type="number" class="form-control form-control-sm" placeholder="${weightPh}"
-              value="${set.weight || ''}"
-              title="${options.isBodyweight ? 'Доп. вес (0 = без довеска)' : 'Вес, кг'}"
-              onchange="WorkoutManager.updateSet(${exerciseIndex}, ${setIndex}, 'weight', this.value)">
-          </div>
-          <div class="col-4">
-            <input type="number" class="form-control form-control-sm" placeholder="повт"
-              value="${set.reps || ''}"
-              onchange="WorkoutManager.updateSet(${exerciseIndex}, ${setIndex}, 'reps', this.value)">
-          </div>
-          <div class="col-2">
-            <button class="btn btn-sm btn-outline-danger"
-              onclick="WorkoutManager.removeSet(${exerciseIndex}, ${setIndex})">
-              <i class="bi bi-x"></i>
-            </button>
-          </div>
+        <span class="set-number">#${setIndex + 1}</span>
+        <div class="set-stepper" title="${options.isBodyweight ? 'Доп. вес' : 'Вес'}">
+          <button type="button" class="btn btn-sm btn-outline-light set-step-btn"
+            onclick="event.stopPropagation(); WorkoutManager.nudgeSet(${exerciseIndex}, ${setIndex}, 'weight', ${-weightStep})">−</button>
+          <input type="number" class="form-control form-control-sm set-step-input" placeholder="${weightPh}"
+            value="${set.weight ?? ''}"
+            inputmode="decimal"
+            onchange="WorkoutManager.updateSet(${exerciseIndex}, ${setIndex}, 'weight', this.value)">
+          <button type="button" class="btn btn-sm btn-outline-light set-step-btn"
+            onclick="event.stopPropagation(); WorkoutManager.nudgeSet(${exerciseIndex}, ${setIndex}, 'weight', ${weightStep})">+</button>
         </div>
+        <div class="set-stepper" title="Повторы">
+          <button type="button" class="btn btn-sm btn-outline-light set-step-btn"
+            onclick="event.stopPropagation(); WorkoutManager.nudgeSet(${exerciseIndex}, ${setIndex}, 'reps', -1)">−</button>
+          <input type="number" class="form-control form-control-sm set-step-input" placeholder="повт"
+            value="${set.reps ?? ''}"
+            inputmode="numeric"
+            onchange="WorkoutManager.updateSet(${exerciseIndex}, ${setIndex}, 'reps', this.value)">
+          <button type="button" class="btn btn-sm btn-outline-light set-step-btn"
+            onclick="event.stopPropagation(); WorkoutManager.nudgeSet(${exerciseIndex}, ${setIndex}, 'reps', 1)">+</button>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-danger set-remove-btn"
+          onclick="event.stopPropagation(); WorkoutManager.removeSet(${exerciseIndex}, ${setIndex})">
+          <i class="bi bi-x"></i>
+        </button>
       </div>
     `).join('');
+  }
+
+  static nudgeSet(exerciseIndex, setIndex, field, delta) {
+    const set = this.currentSession?.exercises?.[exerciseIndex]?.sets?.[setIndex];
+    if (!set) return;
+    const current = Number(set[field]) || 0;
+    let next = current + Number(delta);
+    if (field === 'reps') next = Math.max(0, Math.round(next));
+    else next = Math.max(0, Math.round(next * 10) / 10);
+    set[field] = next;
+    this.focusExercise(exerciseIndex);
+    this.persist(false);
+    this.saveAndRender();
   }
 
   static async persist(forceCloud = false) {
@@ -484,11 +656,11 @@ class WorkoutManager {
   }
 
   static onExerciseCardClick(exerciseIndex, event) {
-    // Ignore clicks on inputs/buttons (they stopPropagation themselves); keep as safety net
     const tag = event?.target?.tagName;
     if (tag === 'INPUT' || tag === 'BUTTON' || event?.target?.closest?.('button, input')) return;
+    if (this.activeExerciseIndex === exerciseIndex) return;
     this.focusExercise(exerciseIndex);
-    this.syncActiveExerciseHighlight();
+    this.saveAndRender();
   }
 
   static addSet(exerciseIndex) {
@@ -500,7 +672,7 @@ class WorkoutManager {
       weight: last ? last.weight : 0,
       reps: last ? last.reps : 0
     });
-    this.startRestTimer(90);
+    this.startRestTimer(this.restPreset);
     this.saveAndRender();
   }
 
@@ -514,7 +686,7 @@ class WorkoutManager {
       return;
     }
     ex.sets.push({ weight: last.weight, reps: last.reps });
-    this.startRestTimer(90);
+    this.startRestTimer(this.restPreset);
     this.saveAndRender();
   }
 
@@ -557,34 +729,73 @@ class WorkoutManager {
     this.saveAndRender();
   }
 
-  static startRestTimer(seconds = 90) {
-    this.stopRestTimer();
-    this.restSecondsLeft = seconds;
-    const total = seconds;
-    const bar = document.getElementById('rest-timer-bar');
-    if (bar) bar.classList.remove('d-none');
+  static setRestPreset(seconds) {
+    this.restPreset = Number(seconds) || 90;
+    if (this.restInterval) {
+      this.startRestTimer(this.restPreset);
+    } else {
+      const val = document.getElementById('rest-timer-value');
+      if (val) val.textContent = Utils.formatTime(this.restPreset);
+      document.querySelectorAll('.session-dock-rest-presets .btn').forEach((btn) => {
+        const sec = Number((btn.textContent || '').replace('с', ''));
+        const isPreset = sec === this.restPreset;
+        btn.classList.toggle('btn-info', isPreset);
+        btn.classList.toggle('btn-outline-light', !isPreset);
+      });
+    }
+  }
+
+  static startRestTimer(seconds = this.restPreset) {
+    this.stopRestTimer(false);
+    const total = Number(seconds) || this.restPreset || 90;
+    this.restPreset = total;
+    this.restTotalSeconds = total;
+    this.restSecondsLeft = total;
+
+    const showRestUi = () => {
+      const progWrap = document.getElementById('rest-timer-bar-progress');
+      progWrap?.classList.remove('d-none');
+      const dock = document.querySelector('.session-dock');
+      dock?.classList.add('is-resting');
+      const val = document.getElementById('rest-timer-value');
+      if (val) val.textContent = Utils.formatTime(this.restSecondsLeft);
+      const prog = document.getElementById('rest-timer-progress');
+      if (prog) prog.style.width = '100%';
+    };
+    showRestUi();
+
     this.restInterval = setInterval(() => {
       this.restSecondsLeft -= 1;
       const val = document.getElementById('rest-timer-value');
       const prog = document.getElementById('rest-timer-progress');
-      if (val) val.textContent = Utils.formatTime(this.restSecondsLeft);
-      if (prog) prog.style.width = `${Math.max(0, (this.restSecondsLeft / total) * 100)}%`;
+      if (val) val.textContent = Utils.formatTime(Math.max(0, this.restSecondsLeft));
+      if (prog && this.restTotalSeconds) {
+        prog.style.width = `${Math.max(0, (this.restSecondsLeft / this.restTotalSeconds) * 100)}%`;
+      }
       if (this.restSecondsLeft <= 0) {
-        this.stopRestTimer();
+        this.stopRestTimer(true);
+        this.buzz();
         Utils.showToast('Отдых закончен');
       }
     }, 1000);
-    const val = document.getElementById('rest-timer-value');
-    if (val) val.textContent = Utils.formatTime(seconds);
   }
 
-  static stopRestTimer() {
+  static stopRestTimer(fromComplete = false) {
     if (this.restInterval) {
       clearInterval(this.restInterval);
       this.restInterval = null;
     }
+    this.restSecondsLeft = 0;
+    this.restTotalSeconds = 0;
+    const progWrap = document.getElementById('rest-timer-bar-progress');
+    progWrap?.classList.add('d-none');
+    document.querySelector('.session-dock')?.classList.remove('is-resting');
     const bar = document.getElementById('rest-timer-bar');
     if (bar) bar.classList.add('d-none');
+    if (!fromComplete) {
+      const val = document.getElementById('rest-timer-value');
+      if (val) val.textContent = Utils.formatTime(this.restPreset);
+    }
   }
 
   static async showAddExerciseModal() {
@@ -696,20 +907,26 @@ class WorkoutManager {
 
   static startExerciseTimer(exerciseIndex) {
     this.focusExercise(exerciseIndex);
-    this.syncActiveExerciseHighlight();
     if (this.exerciseTimers[exerciseIndex]) clearInterval(this.exerciseTimers[exerciseIndex]);
     if (!this.exerciseTimes[exerciseIndex]) this.exerciseTimes[exerciseIndex] = 0;
     this.exerciseTimers[exerciseIndex] = setInterval(() => {
       this.exerciseTimes[exerciseIndex]++;
+      const formatted = Utils.formatTime(this.exerciseTimes[exerciseIndex]);
       const el = document.getElementById(`exercise-timer-${exerciseIndex}`);
-      if (el) el.textContent = Utils.formatTime(this.exerciseTimes[exerciseIndex]);
+      if (el) el.textContent = formatted;
+      const dock = document.getElementById('dock-ex-timer');
+      if (dock && this.activeExerciseIndex === exerciseIndex) dock.textContent = formatted;
       if (this.currentSession?.exercises[exerciseIndex]) {
         this.currentSession.exercises[exerciseIndex].exerciseTime = this.exerciseTimes[exerciseIndex];
       }
-      // Persist draft locally often; cloud throttled in persist()
       DB.saveActiveSession(this.currentSession);
     }, 1000);
     this.updateExerciseTimerButton(exerciseIndex, true);
+    const dockBtn = document.getElementById('dock-ex-timer-btn');
+    if (dockBtn && this.activeExerciseIndex === exerciseIndex) {
+      dockBtn.textContent = 'Стоп';
+      dockBtn.className = 'btn btn-sm btn-danger';
+    }
   }
 
   static stopExerciseTimer(exerciseIndex) {
@@ -721,6 +938,11 @@ class WorkoutManager {
         this.persist(true);
       }
       this.updateExerciseTimerButton(exerciseIndex, false);
+      const dockBtn = document.getElementById('dock-ex-timer-btn');
+      if (dockBtn && this.activeExerciseIndex === exerciseIndex) {
+        dockBtn.textContent = 'Старт';
+        dockBtn.className = 'btn btn-sm btn-outline-light';
+      }
     }
   }
 
@@ -729,8 +951,13 @@ class WorkoutManager {
       Utils.showToast('Упражнение уже завершено', 'warning');
       return;
     }
-    if (this.exerciseTimers[exerciseIndex]) this.stopExerciseTimer(exerciseIndex);
-    else this.startExerciseTimer(exerciseIndex);
+    if (this.exerciseTimers[exerciseIndex]) {
+      this.stopExerciseTimer(exerciseIndex);
+      return;
+    }
+    const focusChanged = this.activeExerciseIndex !== exerciseIndex;
+    this.startExerciseTimer(exerciseIndex);
+    if (focusChanged) this.saveAndRender();
   }
 
   static updateExerciseTimerButton(exerciseIndex, isRunning) {

@@ -345,24 +345,262 @@ body .text-primary { color: var(--primary-color) !important; }
 }
 
 .set-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr 36px;
+  gap: 8px;
+  align-items: center;
   background-color: rgba(255, 255, 255, 0.04);
   border-radius: 10px;
-  padding: 10px;
+  padding: 8px 10px;
   margin-bottom: 8px;
 }
 
 .set-number {
   font-weight: 700;
   color: var(--primary-color);
+  text-align: center;
+}
+
+.set-stepper {
+  display: grid;
+  grid-template-columns: 32px 1fr 32px;
+  gap: 4px;
+  align-items: center;
+}
+
+.set-step-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.set-step-input {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.set-remove-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
 }
 
 .timer-display {
-  font-size: 2rem;
+  font-size: 1.35rem;
   font-weight: 700;
-  text-align: center;
+  text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--primary-color);
   font-family: 'Sora', monospace;
+  min-width: 4.5rem;
+}
+
+/* ── Active workout session mode (0.6) ── */
+body.is-workout-session {
+  padding-bottom: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
+body.is-workout-session #app {
+  height: calc(100vh - var(--safe-top));
+  height: calc(100dvh - var(--safe-top));
+}
+
+.workout-session {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.session-topbar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--stroke);
+  background: linear-gradient(160deg, rgba(21, 28, 42, 0.98), rgba(12, 16, 24, 0.9));
+  flex-shrink: 0;
+}
+
+.session-minimize {
+  text-decoration: none !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px !important;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.session-minimize i { font-size: 1.1rem; }
+
+.session-topbar-center {
+  text-align: center;
+  min-width: 0;
+}
+
+.session-title {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-progress-text {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.session-progress-track {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.session-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3ddc97, #5ec8ff);
+  transition: width 0.25s ease;
+}
+
+.session-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;
+}
+
+.session-container {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.session-notes {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.session-notes .form-control:focus {
+  box-shadow: none;
+  background: transparent;
+}
+
+.session-dock {
+  flex-shrink: 0;
+  border-top: 1px solid var(--stroke);
+  background: rgba(12, 16, 24, 0.97);
+  backdrop-filter: blur(10px);
+  padding: 12px 14px calc(12px + var(--safe-bottom));
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.session-dock.is-resting {
+  border-top-color: rgba(94, 200, 255, 0.45);
+}
+
+.session-dock-idle {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.session-dock-idle-text {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.session-dock-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5ec8ff;
+  font-weight: 700;
+}
+
+.session-dock-title {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #fff;
+  line-height: 1.25;
+}
+
+.session-dock-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.session-dock-timers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.session-dock-timer-block {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.session-dock-timer-label {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.session-dock-timer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.session-dock-timer-row strong {
+  font-family: 'Sora', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.15rem;
+  color: #fff;
+}
+
+.session-dock-rest-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.session-dock-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.session-rest-progress {
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 420px) {
+  .session-dock-timers {
+    grid-template-columns: 1fr;
+  }
+  .session-minimize span { display: none; }
 }
 
 .fade-in {
