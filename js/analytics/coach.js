@@ -62,7 +62,9 @@
     const perWeek = recent.length / weeks;
     const rounded = Math.round(perWeek * 10) / 10;
     const target = ctx.freq;
-    const softMode = ctx.mode === 'travel' || ctx.mode === 'injury';
+    const softMode = window.CoachGoal?.isSoftMode
+      ? CoachGoal.isSoftMode(ctx.mode)
+      : (ctx.mode === 'pause' || ctx.mode === 'injury');
 
     if (done.length < 3) {
       return {
@@ -85,7 +87,7 @@
         severity: softMode ? 'info' : 'warn',
         title: softMode ? 'Частота ниже поддержки' : 'Частота ниже цели',
         body: softMode
-          ? `За ${FREQ_WINDOW_DAYS} дн. ~${rounded} трен./нед. при мягком ориентире ${target}. Даже короткая домашняя сессия лучше нуля.`
+          ? `За ${FREQ_WINDOW_DAYS} дн. ~${rounded} трен./нед. при мягком ориентире ${target}. В простое это нормально — главное зафиксировать период и вернуться без рывка.`
           : `За ${FREQ_WINDOW_DAYS} дн. вышло ~${rounded} трен./нед. при ориентире ${target}. Лучше короткая сессия, чем ещё один пропуск.`,
         meta: `${recent.length} ${plural(recent.length, ['тренировка', 'тренировки', 'тренировок'])}`,
         cta: 'templates'
@@ -120,7 +122,9 @@
     const catalog = new Map((exercises || []).map((e) => [e.id, e]));
     const byEx = new Map();
     const focusId = ctx.goal?.focusExerciseId || null;
-    const softMode = ctx.mode === 'travel' || ctx.mode === 'injury';
+    const softMode = window.CoachGoal?.isSoftMode
+      ? CoachGoal.isSoftMode(ctx.mode)
+      : (ctx.mode === 'pause' || ctx.mode === 'injury');
 
     for (const s of done) {
       for (const ex of s.exercises || []) {
@@ -161,8 +165,8 @@
         severity: 'info',
         title: 'Сила подождёт',
         body: focusId && catalog.get(focusId)
-          ? `Сейчас режим поддержки — не гонись за максимумом в «${catalog.get(focusId).name}». Вернёшься к прогрессии после периода.`
-          : 'Сейчас режим поддержки — плато по рабочим весам не приоритет. Держи движение и объём по самочувствию.',
+          ? `Сейчас простой / щадящий режим — не гонись за максимумом в «${catalog.get(focusId).name}». Вернёшься к прогрессии после периода.`
+          : 'Сейчас простой / щадящий режим — плато по рабочим весам не приоритет. Зафиксируем паузу и сравним результат после возврата.',
         meta: null,
         cta: null
       };
@@ -213,7 +217,9 @@
     const warns = (insightCards || []).filter((c) => c.severity === 'warn');
     const done = completedSessions(sessions);
     const last = done.slice().sort((a, b) => b.date.localeCompare(a.date))[0];
-    const softMode = ctx.mode === 'travel' || ctx.mode === 'injury';
+    const softMode = window.CoachGoal?.isSoftMode
+      ? CoachGoal.isSoftMode(ctx.mode)
+      : (ctx.mode === 'pause' || ctx.mode === 'injury');
     const focusName = ctx.goal?.focusExerciseId
       ? (window._coachFocusName || null)
       : null;
@@ -227,15 +233,19 @@
       const until = ctx.goal?.periodTo
         ? ` до ${ctx.goal.periodTo.slice(8, 10)}.${ctx.goal.periodTo.slice(5, 7)}`
         : '';
+      const reason = ctx.goal?.pauseReason && window.CoachGoal?.PAUSE_REASON_LABELS
+        ? CoachGoal.PAUSE_REASON_LABELS[ctx.goal.pauseReason]
+        : null;
+      const reasonBit = reason ? ` (${reason})` : '';
       return {
         id: 'coach-next',
         kind: 'coach',
         severity: 'info',
         title: 'Следующий шаг',
-        body: ctx.mode === 'travel'
-          ? `Командировка/без зала${until}: короткие сессии с собственным весом или что есть под рукой. Цель — не потерять привычку, не ставить рекорды.`
+        body: ctx.mode === 'pause'
+          ? `Простой без зала${reasonBit}${until}: это пауза, не провал плана. Коуч зафиксирует период — после возврата сравним объём и фокус с тем, что было до.`
           : `Щадящий режим${until}: убери тяжёлые максимумы, оставь лёгкий объём и восстановление. Вернёмся к прогрессу после периода.`,
-        meta: upcoming[0] ? `План: ${upcoming[0].slice(8, 10)}.${upcoming[0].slice(5, 7)}` : 'Можно набросать план вручную',
+        meta: upcoming[0] ? `План: ${upcoming[0].slice(8, 10)}.${upcoming[0].slice(5, 7)}` : 'План на простой можно набросать позже',
         cta: 'templates'
       };
     }
@@ -344,14 +354,14 @@
       };
     }
 
-    if (ctx.mode === 'travel' || ctx.mode === 'injury') {
+    if (ctx.mode === 'pause' || ctx.mode === 'injury') {
       return {
         id: 'coach-brief',
         kind: 'coach',
         severity: 'info',
         title: 'Фокус коуча',
-        body: ctx.mode === 'travel'
-          ? 'Сейчас вектор — поддержка формы без гонки за силой. Ниже советы под этот режим; цель можно сменить в любой момент.'
+        body: ctx.mode === 'pause'
+          ? 'Сейчас вектор — простой без зала. Не давим на силу и объём; ниже — что фиксируем в этом периоде. Цель можно сменить в любой момент.'
           : 'Сейчас вектор — щадящий режим. Не давим на максимумы; ниже — что делать в этом периоде.',
         meta: goalLine || 'Режим поддержки',
         cta: 'goal'
@@ -387,14 +397,16 @@
   }
 
   function softInsightSeverity(cards, mode) {
-    if (mode !== 'travel' && mode !== 'injury') return cards;
+    if (!(window.CoachGoal?.isSoftMode ? CoachGoal.isSoftMode(mode) : (mode === 'pause' || mode === 'injury'))) {
+      return cards;
+    }
     return cards.map((c) => {
       if (c.id === 'volume-regression' && c.severity === 'warn') {
         return {
           ...c,
           severity: 'info',
           title: 'Объём ниже обычного',
-          body: 'В режиме поддержки падение тоннажа ожидаемо. Это не провал плана — просто другой вектор.'
+          body: 'В простое / щадящем режиме падение тоннажа ожидаемо. Это не провал плана — другой вектор на период.'
         };
       }
       if (c.id === 'weight-vs-training' && c.severity === 'warn') {
@@ -435,8 +447,28 @@
       nextMoveCard(insightCards, input.sessions, input.templates, input.planned, today, ctx)
     ];
 
-    const withoutBrief = [...insightCards, ...coachExtras];
+    let withoutBrief = [...insightCards, ...coachExtras];
+
+    const latestSessionId = window.CoachGoal?.latestCompletedSessionId
+      ? CoachGoal.latestCompletedSessionId(input.sessions)
+      : null;
+    const dismissed = window.CoachGoal?.activeDismissedIds
+      ? CoachGoal.activeDismissedIds(input.inbox, latestSessionId)
+      : [];
+    const dismissedSet = new Set(dismissed);
+    if (dismissedSet.size) {
+      withoutBrief = withoutBrief.filter((c) => !dismissedSet.has(c.id));
+    }
+
     const brief = briefCard(withoutBrief, ctx, input.exercises);
+    // If user dismissed everything actionable, brief explains the quiet state
+    if (dismissedSet.size && !withoutBrief.length) {
+      brief.severity = 'ok';
+      brief.body = 'Замечания прочитаны. Обновлённый разбор появится после следующей завершённой тренировки.';
+      brief.meta = 'Входящие очищены';
+      brief.cta = 'goal';
+    }
+
     const rest = withoutBrief.slice().sort((a, b) => {
       const severityRank = { warn: 0, info: 1, ok: 2 };
       const sr = (severityRank[a.severity] ?? 9) - (severityRank[b.severity] ?? 9);
@@ -454,9 +486,11 @@
         ? warns[0].title
         : warns.length > 1
           ? `Коуч: ${warns.length} ${plural(warns.length, ['замечание', 'замечания', 'замечаний'])}`
-          : (ctx.mode === 'travel' || ctx.mode === 'injury')
-            ? 'Режим поддержки'
-            : 'Коуч: всё ровно';
+          : dismissedSet.size && !withoutBrief.length
+            ? 'Прочитано · ждём тренировку'
+            : (window.CoachGoal?.isSoftMode ? CoachGoal.isSoftMode(ctx.mode) : false)
+              ? 'Режим простоя'
+              : 'Коуч: всё ровно';
 
     return {
       cards: ordered,
@@ -467,7 +501,9 @@
         ok: ordered.filter((c) => c.severity === 'ok').length
       },
       insights,
-      goal: ctx.goal
+      goal: ctx.goal,
+      latestSessionId,
+      dismissedIds: dismissed
     };
   }
 

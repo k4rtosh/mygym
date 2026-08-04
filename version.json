@@ -1,12 +1,12 @@
 {
-  "version": "1.2.0",
+  "version": "1.2.1",
   "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": [
-    "Коуч: цель (сила/масса/привычка/поддержка) + режим командировка/восстановление на период",
-    "Фокус-упражнение и целевая частота влияют на приоритеты советов",
-    "Цель задаётся на экране Коуча и видна в профиле; демо сид v3 с целью по жиму",
-    "Нужна миграция profiles.coach_goal (см. supabase/migrations)"
+    "Режим «Простой (без зала)» вместо командировки + причина простоя и период",
+    "Замечания коуча: «Прочитано» скрывает до следующей завершённой тренировки",
+    "Без расширения каталога BW — простой фиксируется как пауза для анализа после возврата",
+    "Миграция profiles.coach_inbox (см. supabase/migrations)"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"

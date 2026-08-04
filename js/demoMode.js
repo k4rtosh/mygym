@@ -100,6 +100,15 @@
             };
           }
         }
+        if (Object.prototype.hasOwnProperty.call(patch, 'coachInbox')) {
+          if (patch.coachInbox === null) {
+            current.coach_inbox = null;
+          } else {
+            current.coach_inbox = window.CoachGoal?.normalizeInbox
+              ? CoachGoal.normalizeInbox(patch.coachInbox)
+              : patch.coachInbox;
+          }
+        }
       }
       putDemoProfile(current);
       DemoAuth.profile = current;
