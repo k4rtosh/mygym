@@ -420,11 +420,12 @@ In-memory кеш списков (~45 с; каталог упражнений ~10
 - `AnalyticsBodyWeight` — нормализация и сводка серии веса
 - `AnalyticsAdherence` — план/факт/пропуски по диапазону дат
 - `AnalyticsInsights` — карточки «разбор ошибок» (`buildCards`)
-- `CoachGoal` — нормализация цели (`intent`, `mode` вкл. **Простой**, `pauseReason`, фокус, период, частота) + inbox «прочитано до следующей тренировки»
-- `AnalyticsCoach` — rule-коуч (`buildPack`): фокус, частота, плато, следующий шаг + insights; приоритеты зависят от цели/режима; без LLM
+- `CoachGoal` — нормализация цели (`intent`, `mode` вкл. **Простой**, `pauseReason`, фокус, период, частота, `lastPause`) + inbox «прочитано до следующей тренировки»
+- `AnalyticsCoach` — rule-коуч (`buildPack`): фокус, частота, плато, **возврат после простоя**, следующий шаг + insights; без LLM
 
 Новую аналитику писать **сюда**, UI — тонкая оболочка в `progress.js` (хаб «Коуч», маршрут `progress-insights`).  
-Цель: `profiles.coach_goal`. Inbox: `profiles.coach_inbox`. Миграции в `supabase/migrations/`.
+Цель: `profiles.coach_goal`. Inbox: `profiles.coach_inbox`. Миграции в `supabase/migrations/`.  
+При выходе из режима «Простой» период архивируется в `lastPause` для сравнения до/после.
 
 LLM-коуч (позже): Supabase Edge Function, тот же контракт карточек — не свободный чат.
 

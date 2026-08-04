@@ -49,6 +49,7 @@
    *   periodFrom: string|null,
    *   periodTo: string|null,
    *   targetFrequency: number|null,
+   *   lastPause: object|null,
    *   updatedAt: string|null
    * }}
    */
@@ -82,8 +83,76 @@
       periodFrom: periodFrom && /^\d{4}-\d{2}-\d{2}$/.test(periodFrom) ? periodFrom : null,
       periodTo: periodTo && /^\d{4}-\d{2}-\d{2}$/.test(periodTo) ? periodTo : null,
       targetFrequency,
+      lastPause: normalizeLastPause(raw.lastPause),
       updatedAt: raw.updatedAt ? String(raw.updatedAt) : null
     };
+  }
+
+  function normalizeLastPause(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const periodFrom = raw.periodFrom ? String(raw.periodFrom).slice(0, 10) : null;
+    const periodTo = raw.periodTo ? String(raw.periodTo).slice(0, 10) : null;
+    if (!periodFrom || !periodTo) return null;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(periodFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(periodTo)) return null;
+    let reason = raw.reason ? String(raw.reason) : null;
+    if (reason && !PAUSE_REASONS.includes(reason)) reason = 'other';
+    return {
+      reason,
+      periodFrom,
+      periodTo,
+      closedAt: raw.closedAt ? String(raw.closedAt) : null
+    };
+  }
+
+  /**
+   * When leaving pause mode, archive the period into lastPause for return analysis.
+   */
+  function withArchivedPause(previousGoal, nextGoal, today = todayStr()) {
+    const prev = normalize(previousGoal);
+    const next = normalize(nextGoal);
+    if (!next) return null;
+
+    const prevWasPause = prev && (prev.mode === 'pause' || prev.mode === 'travel');
+    const nextIsPause = next.mode === 'pause';
+
+    if (prevWasPause && !nextIsPause) {
+      const periodFrom = prev.periodFrom || today;
+      const periodTo = prev.periodTo && prev.periodTo >= periodFrom ? prev.periodTo : today;
+      next.lastPause = {
+        reason: prev.pauseReason || null,
+        periodFrom,
+        periodTo,
+        closedAt: new Date().toISOString()
+      };
+    } else if (!next.lastPause && prev?.lastPause) {
+      next.lastPause = prev.lastPause;
+    }
+    return next;
+  }
+
+  /**
+   * Completed pause window ready for «after return» analysis (not currently in pause).
+   */
+  function resolveCompletedPause(goal, today = todayStr()) {
+    const g = normalize(goal);
+    if (!g) return null;
+    if (effectiveMode(g, today) === 'pause') return null;
+
+    if (g.lastPause?.periodFrom && g.lastPause?.periodTo && g.lastPause.periodTo < today) {
+      return { ...g.lastPause, source: 'lastPause' };
+    }
+
+    // mode still «pause» but period ended → effectiveMode already normal
+    if (g.mode === 'pause' && g.periodTo && g.periodTo < today) {
+      return {
+        reason: g.pauseReason,
+        periodFrom: g.periodFrom || g.periodTo,
+        periodTo: g.periodTo,
+        closedAt: null,
+        source: 'expired'
+      };
+    }
+    return null;
   }
 
   function fromProfile(profile) {
@@ -138,6 +207,11 @@
       const a = g.periodFrom ? g.periodFrom.slice(5).replace('-', '.') : '…';
       const b = g.periodTo ? g.periodTo.slice(5).replace('-', '.') : '…';
       parts.push(`${a}–${b}`);
+    } else if (mode === 'normal' && g.lastPause?.periodTo) {
+      const reason = g.lastPause.reason && PAUSE_REASON_LABELS[g.lastPause.reason]
+        ? PAUSE_REASON_LABELS[g.lastPause.reason]
+        : null;
+      parts.push(reason ? `после простоя · ${reason}` : 'после простоя');
     }
     return parts.join(' · ');
   }
@@ -216,6 +290,9 @@
     PAUSE_REASON_LABELS,
     normalize,
     fromProfile,
+    normalizeLastPause,
+    withArchivedPause,
+    resolveCompletedPause,
     isSoftMode,
     effectiveMode,
     effectiveFrequency,

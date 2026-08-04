@@ -841,17 +841,22 @@ class ProgressManager {
     });
     if (!values) return;
 
-    const goal = CoachGoal.normalize({
-      intent: values.intent,
-      mode: values.mode,
-      pauseReason: values.pauseReason || null,
-      focusExerciseId: values.focusExerciseId || null,
-      targetFrequency: values.targetFrequency === '' || values.targetFrequency == null
-        ? null
-        : Number(values.targetFrequency),
-      periodFrom: values.mode === 'normal' ? null : (values.periodFrom || null),
-      periodTo: values.mode === 'normal' ? null : (values.periodTo || null)
-    });
+    const goal = CoachGoal.withArchivedPause(
+      current,
+      {
+        intent: values.intent,
+        mode: values.mode,
+        pauseReason: values.pauseReason || null,
+        focusExerciseId: values.focusExerciseId || null,
+        targetFrequency: values.targetFrequency === '' || values.targetFrequency == null
+          ? null
+          : Number(values.targetFrequency),
+        periodFrom: values.mode === 'normal' ? null : (values.periodFrom || null),
+        periodTo: values.mode === 'normal' ? null : (values.periodTo || null),
+        lastPause: current?.lastPause || null
+      },
+      today
+    );
     if (!goal) {
       Utils.showToast('Проверь поля цели', 'warning');
       return;

@@ -24,6 +24,10 @@
     return `${y}-${m}-${day}`;
   }
 
+  function daysBetween(a, b) {
+    return Math.round((toDate(b) - toDate(a)) / DAY_MS);
+  }
+
   function completedSessions(sessions) {
     return (sessions || []).filter((s) => s && s.completed && s.endTime && s.date);
   }
@@ -210,6 +214,146 @@
         .join('. ') + '. Попробуй +1–2 повтора или микрошаг веса.',
       meta: `Найдено: ${plateaus.length}`,
       cta: 'exercises'
+    };
+  }
+
+  function sessionVolume(session) {
+    let total = 0;
+    for (const ex of session.exercises || []) {
+      for (const set of ex.sets || []) {
+        const w = Number(set.weight);
+        const r = Number(set.reps);
+        if (!Number.isFinite(w) || !Number.isFinite(r) || w < 0 || r < 0) continue;
+        total += w * r;
+      }
+    }
+    return total;
+  }
+
+  function maxFocusWeight(sessions, exerciseId) {
+    if (!exerciseId) return null;
+    let max = 0;
+    let hits = 0;
+    for (const s of sessions) {
+      for (const ex of s.exercises || []) {
+        if (ex.exerciseId !== exerciseId) continue;
+        const w = maxSetWeight(ex);
+        if (w > 0) {
+          hits += 1;
+          if (w > max) max = w;
+        }
+      }
+    }
+    return hits ? max : null;
+  }
+
+  function formatShort(dateStr) {
+    if (!dateStr || dateStr.length < 10) return dateStr || '';
+    return `${dateStr.slice(8, 10)}.${dateStr.slice(5, 7)}`;
+  }
+
+  /**
+   * After a completed pause: compare ~21d before vs after period.
+   * @returns {object|null} card or null if not applicable
+   */
+  function pauseReturnCard(sessions, exercises, ctx, today) {
+    const pause = window.CoachGoal?.resolveCompletedPause
+      ? CoachGoal.resolveCompletedPause(ctx.goal, today)
+      : null;
+    if (!pause) return null;
+
+    // Too old — don't spam forever (user can still have dismissed earlier)
+    const age = daysBetween(pause.periodTo, today);
+    if (age > 60) return null;
+
+    const done = completedSessions(sessions);
+    const after = done.filter((s) => s.date > pause.periodTo && s.date <= today);
+    const beforeTo = addDays(pause.periodFrom, -1);
+    const beforeFrom = addDays(beforeTo, -20);
+    const before = done.filter((s) => s.date >= beforeFrom && s.date <= beforeTo);
+
+    const reason = pause.reason && window.CoachGoal?.PAUSE_REASON_LABELS
+      ? CoachGoal.PAUSE_REASON_LABELS[pause.reason]
+      : null;
+    const periodLabel = `${formatShort(pause.periodFrom)}–${formatShort(pause.periodTo)}`;
+    const reasonBit = reason ? ` (${reason})` : '';
+
+    if (!after.length) {
+      return {
+        id: 'coach-pause-return',
+        kind: 'coach',
+        severity: 'info',
+        title: 'Простой закончился',
+        body: `Пауза${reasonBit} ${periodLabel} позади. Закрой первую тренировку после возврата — сравним объём и фокус с тем, что было до.`,
+        meta: 'Ждём первую сессию',
+        cta: 'templates'
+      };
+    }
+
+    const beforeVol = before.reduce((s, x) => s + sessionVolume(x), 0);
+    const afterVol = after.reduce((s, x) => s + sessionVolume(x), 0);
+    const beforeCount = before.length;
+    const afterCount = after.length;
+
+    const focusId = ctx.goal?.focusExerciseId || null;
+    const focusName = focusId
+      ? ((exercises || []).find((e) => e.id === focusId)?.name || window._coachFocusName || 'фокус')
+      : null;
+    const beforeFocus = maxFocusWeight(before, focusId);
+    const afterFocus = maxFocusWeight(after, focusId);
+
+    const bits = [];
+    bits.push(`тренировок ${afterCount} после vs ${beforeCount} до`);
+    if (beforeVol > 0 || afterVol > 0) {
+      const pct = beforeVol > 0 ? Math.round((afterVol / beforeVol) * 100) : null;
+      bits.push(
+        pct != null
+          ? `объём ~${pct}% от окна до простоя`
+          : `объём после: ${Math.round(afterVol)}`
+      );
+    }
+    if (focusName && beforeFocus != null && afterFocus != null) {
+      const delta = Math.round((afterFocus - beforeFocus) * 10) / 10;
+      const sign = delta > 0 ? '+' : '';
+      bits.push(`${focusName}: ${afterFocus} кг (${sign}${delta} к до)`);
+    } else if (focusName && afterFocus != null) {
+      bits.push(`${focusName}: ${afterFocus} кг после`);
+    }
+
+    const volRatio = beforeVol > 0 ? afterVol / beforeVol : 1;
+    const focusDrop = beforeFocus != null && afterFocus != null && afterFocus < beforeFocus * 0.92;
+    const thinReturn = afterCount === 1;
+
+    let severity = 'ok';
+    let title = 'Возврат после простоя';
+    let body;
+
+    if (thinReturn && age <= 21) {
+      severity = 'info';
+      title = 'Первая сессия после простоя';
+      body = `Пауза${reasonBit} ${periodLabel}. ${bits.join(' · ')}. Не гонись за старым максимумом — набери 1–2 спокойные тренировки.`;
+    } else if (volRatio < 0.7 || focusDrop) {
+      severity = 'warn';
+      title = 'После простоя ещё ниже базы';
+      body = `Пауза${reasonBit} ${periodLabel}. ${bits.join(' · ')}. Нормально после паузы — верни рабочие веса постепенно, без рекордов на первой неделе.`;
+    } else if (volRatio >= 0.9 && (!focusId || (afterFocus != null && beforeFocus != null && afterFocus >= beforeFocus * 0.95))) {
+      severity = 'ok';
+      title = 'После простоя форма рядом';
+      body = `Пауза${reasonBit} ${periodLabel}. ${bits.join(' · ')}. Хороший возврат — можно снова опираться на цель.`;
+    } else {
+      severity = 'info';
+      title = 'Возврат после простоя';
+      body = `Пауза${reasonBit} ${periodLabel}. ${bits.join(' · ')}. Держи ритм ещё пару сессий — картина стабилизируется.`;
+    }
+
+    return {
+      id: 'coach-pause-return',
+      kind: 'coach',
+      severity,
+      title,
+      body,
+      meta: `+${age} дн. после паузы`,
+      cta: focusId ? 'exercises' : 'templates'
     };
   }
 
@@ -444,8 +588,9 @@
     const coachExtras = [
       frequencyCard(input.sessions, today, ctx),
       plateauCard(input.sessions, input.exercises, ctx),
+      pauseReturnCard(input.sessions, input.exercises, ctx, today),
       nextMoveCard(insightCards, input.sessions, input.templates, input.planned, today, ctx)
-    ];
+    ].filter(Boolean);
 
     let withoutBrief = [...insightCards, ...coachExtras];
 
@@ -512,6 +657,7 @@
     _internal: {
       frequencyCard,
       plateauCard,
+      pauseReturnCard,
       nextMoveCard,
       briefCard,
       resolveGoal
