@@ -262,6 +262,54 @@ body .text-primary { color: var(--primary-color) !important; }
 
 .home-last { border-color: rgba(255, 90, 106, 0.25); }
 
+/* New workout picker */
+.workout-start {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+.workout-start .card,
+.workout-start .card-body {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.workout-tpl-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  text-align: left;
+  white-space: normal;
+  box-sizing: border-box;
+}
+
+.workout-tpl-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.workout-tpl-count {
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.workout-start-empty-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 .home-last-clickable {
   display: block;
   background: var(--card-bg);
@@ -1433,8 +1481,8 @@ small { color: var(--text-muted); }
 
 .coach-goal-bar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   gap: 12px;
   padding: 12px 14px;
   border: 1px solid rgba(120, 180, 255, 0.35);
@@ -1456,15 +1504,19 @@ small { color: var(--text-muted); }
   font-weight: 600;
   color: #fff;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .coach-goal-bar-actions {
   display: flex;
   flex-wrap: wrap;
-  flex-shrink: 0;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
-  justify-content: flex-end;
+}
+
+.coach-goal-bar-actions .btn {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .insight-card-actions {
@@ -1544,12 +1596,13 @@ small { color: var(--text-muted); }
 .insight-card-top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   margin-bottom: 8px;
 }
 
 .insight-severity {
+  flex-shrink: 0;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -1562,10 +1615,14 @@ small { color: var(--text-muted); }
 .insight-info .insight-severity { color: #7fd4ff; }
 
 .insight-meta {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 0.78rem;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   text-align: right;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
 }
 
 .insight-title {

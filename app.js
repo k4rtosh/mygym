@@ -1,4 +1,4 @@
-const APP_VERSION = window.MYGYM_CONFIG?.APP_VERSION || '1.3.1';
+const APP_VERSION = window.MYGYM_CONFIG?.APP_VERSION || '1.3.2';
 
 async function clearCacheAndReload() {
   try {

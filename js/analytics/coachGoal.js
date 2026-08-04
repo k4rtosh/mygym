@@ -315,6 +315,47 @@
     };
   }
 
+  // ── Local inbox fallback (when profiles.coach_inbox missing in cloud) ──
+
+  function localInboxKey(userId) {
+    return `mygym_coach_inbox:${userId || 'anon'}`;
+  }
+
+  function readLocalInbox(userId) {
+    try {
+      const raw = localStorage.getItem(localInboxKey(userId));
+      if (!raw) return null;
+      return normalizeInbox(JSON.parse(raw));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function writeLocalInbox(userId, inbox) {
+    try {
+      localStorage.setItem(localInboxKey(userId), JSON.stringify(normalizeInbox(inbox)));
+    } catch (_) { /* ignore quota */ }
+  }
+
+  /**
+   * Prefer cloud inbox when column is present on profile row;
+   * otherwise fall back to localStorage (migration not applied yet).
+   */
+  function resolveInbox(profile, userId) {
+    if (profile && Object.prototype.hasOwnProperty.call(profile, 'coach_inbox')) {
+      return fromProfileInbox(profile);
+    }
+    if (profile && Object.prototype.hasOwnProperty.call(profile, 'coachInbox')) {
+      return fromProfileInbox(profile);
+    }
+    return readLocalInbox(userId) || normalizeInbox(null);
+  }
+
+  function isMissingInboxColumnError(err) {
+    const msg = String(err?.message || err || '');
+    return /coach_inbox/i.test(msg) && (/schema cache|column/i.test(msg) || /could not find/i.test(msg));
+  }
+
   window.CoachGoal = {
     INTENTS,
     MODES,
@@ -338,6 +379,10 @@
     pauseReasonOptions,
     normalizeInbox,
     fromProfileInbox,
+    resolveInbox,
+    readLocalInbox,
+    writeLocalInbox,
+    isMissingInboxColumnError,
     latestCompletedSessionId,
     activeDismissedIds,
     dismissCards

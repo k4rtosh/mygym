@@ -147,23 +147,23 @@ class WorkoutManager {
     }
 
     const templateButtons = templates.map((t) => `
-      <button class="btn btn-outline-light w-100 mb-2 text-start"
+      <button type="button" class="btn btn-outline-light workout-tpl-btn mb-2"
         onclick="WorkoutManager.startFromTemplate('${t.id}')">
-        <strong>${Utils.escapeHtml(t.name)}</strong><br>
-        <small class="text-muted">${(t.exercises || []).length} упражнений</small>
+        <span class="workout-tpl-name">${Utils.escapeHtml(t.name)}</span>
+        <span class="workout-tpl-count">${(t.exercises || []).length}&nbsp;упр.</span>
       </button>
     `).join('');
 
     container.innerHTML = `
       <div class="app-header fade-in">
         <div class="d-flex align-items-center">
-          <button class="btn btn-link text-white me-2" onclick="Router.navigate('home')">
+          <button class="btn btn-link text-white me-2" onclick="Router.navigate('home')" aria-label="Назад">
             <i class="bi bi-arrow-left"></i>
           </button>
           <h4 class="mb-0">Новая тренировка</h4>
         </div>
       </div>
-      <div class="container fade-in">
+      <div class="container fade-in workout-start">
         ${plannedHtml}
         ${templates.length ? `
           <div class="card mb-3">
@@ -174,7 +174,7 @@ class WorkoutManager {
         <div class="card">
           <div class="card-body text-center">
             <p class="mb-3">Или пустая тренировка</p>
-            <button class="btn btn-primary w-100" onclick="WorkoutManager.startEmpty()">
+            <button type="button" class="btn btn-primary workout-start-empty-btn" onclick="WorkoutManager.startEmpty()">
               <i class="bi bi-lightning"></i> Начать
             </button>
           </div>
