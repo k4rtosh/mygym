@@ -800,10 +800,11 @@ class ProgressManager {
         },
         {
           name: 'pauseReason',
-          label: 'Причина простоя (если режим «Простой»)',
+          label: 'Причина простоя',
           type: 'select',
           value: current?.pauseReason || '',
-          options: CoachGoal.pauseReasonOptions()
+          options: CoachGoal.pauseReasonOptions(),
+          showWhen: { field: 'mode', equals: 'pause' }
         },
         {
           name: 'focusExerciseId',
@@ -824,31 +825,38 @@ class ProgressManager {
         },
         {
           name: 'periodFrom',
-          label: 'Период режима с (простой / восстановление)',
+          label: 'Период режима с',
           type: 'date',
-          value: current?.periodFrom || today
+          value: current?.periodFrom || today,
+          showWhen: { field: 'mode', in: ['pause', 'injury'] }
         },
         {
           name: 'periodTo',
           label: 'Период режима по',
           type: 'date',
-          value: current?.periodTo || ''
+          value: current?.periodTo || '',
+          showWhen: { field: 'mode', in: ['pause', 'injury'] }
         }
       ]
     });
     if (!values) return;
 
-    const goal = CoachGoal.normalize({
-      intent: values.intent,
-      mode: values.mode,
-      pauseReason: values.pauseReason || null,
-      focusExerciseId: values.focusExerciseId || null,
-      targetFrequency: values.targetFrequency === '' || values.targetFrequency == null
-        ? null
-        : Number(values.targetFrequency),
-      periodFrom: values.mode === 'normal' ? null : (values.periodFrom || null),
-      periodTo: values.mode === 'normal' ? null : (values.periodTo || null)
-    });
+    const goal = CoachGoal.withArchivedPause(
+      current,
+      {
+        intent: values.intent,
+        mode: values.mode,
+        pauseReason: values.pauseReason || null,
+        focusExerciseId: values.focusExerciseId || null,
+        targetFrequency: values.targetFrequency === '' || values.targetFrequency == null
+          ? null
+          : Number(values.targetFrequency),
+        periodFrom: values.mode === 'normal' ? null : (values.periodFrom || null),
+        periodTo: values.mode === 'normal' ? null : (values.periodTo || null),
+        lastPause: current?.lastPause || null
+      },
+      today
+    );
     if (!goal) {
       Utils.showToast('Проверь поля цели', 'warning');
       return;

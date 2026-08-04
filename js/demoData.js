@@ -1,7 +1,7 @@
 // Demo / test helpers for profile
 const DemoData = {
   /** Bump when seed shape changes — demo login reseeds automatically. */
-  SEED_VERSION: 3,
+  SEED_VERSION: 4,
   SEED_VERSION_KEY: 'mygym_demo_seed_version',
 
   needsReseed() {
@@ -244,7 +244,14 @@ const DemoData = {
         focusExerciseId: 'chest_1',
         targetFrequency: 3,
         periodFrom: null,
-        periodTo: null
+        periodTo: null,
+        // Closed pause so coach shows «возврат после простоя»
+        lastPause: {
+          reason: 'travel',
+          periodFrom: this.daysAgo(21),
+          periodTo: this.daysAgo(11),
+          closedAt: new Date().toISOString()
+        }
       }
     });
 
