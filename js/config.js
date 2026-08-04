@@ -17,9 +17,14 @@
   window.MYGYM_CONFIG = {
     SUPABASE_URL: 'https://gkcjwunfgzhidqyyhhik.supabase.co',
     SUPABASE_ANON_KEY: 'sb_publishable_7il2t8elu3sEsOyx8b7x5Q_bVZWkJcj',
-    APP_VERSION: '1.2.2',
+    APP_VERSION: '1.3.0',
     BASE_PATH: base,
-    IS_NATIVE: !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
+    IS_NATIVE: !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()),
+    /** Optional LLM rewrite of coach card title/body (rules always compute first). */
+    COACH_LLM_ENABLED: false,
+    /** Empty → `${SUPABASE_URL}/functions/v1/coach-enrich` */
+    COACH_LLM_URL: '',
+    COACH_LLM_TIMEOUT_MS: 2500
   };
 
   /** Join BASE_PATH with a root-relative path like "/js/x.js" or "js/x.js" */

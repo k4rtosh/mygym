@@ -1498,9 +1498,11 @@ small { color: var(--text-muted); }
 
 .coach-goal-bar-actions {
   display: flex;
+  flex-wrap: wrap;
   flex-shrink: 0;
   gap: 6px;
   align-items: center;
+  justify-content: flex-end;
 }
 
 .insight-card-actions {
@@ -1518,6 +1520,63 @@ small { color: var(--text-muted); }
 
 .insight-dismiss:hover {
   color: #fff !important;
+}
+
+.search-select {
+  position: relative;
+}
+
+.search-select-menu {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: #141a24;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+.search-select-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: transparent;
+  color: #fff;
+  text-align: left;
+}
+
+.search-select-option:last-child {
+  border-bottom: 0;
+}
+
+.search-select-option:hover,
+.search-select-option:focus {
+  background: rgba(120, 180, 255, 0.12);
+}
+
+.search-select-option-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.search-select-option-meta,
+.search-select-hint,
+.search-select-empty {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.search-select-empty {
+  padding: 12px;
 }
 
 .insight-card-top {

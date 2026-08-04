@@ -131,6 +131,40 @@
   }
 
   /**
+   * Explicit «вернулся в зал»: archive pause → mode normal.
+   * Works while effectiveMode is pause, or while stored mode is still pause
+   * (period already expired but profile not cleaned).
+   */
+  function closePause(goal, today = todayStr()) {
+    const g = normalize(goal);
+    if (!g) return null;
+    const active = effectiveMode(g, today) === 'pause' || g.mode === 'pause' || g.mode === 'travel';
+    if (!active) return null;
+    return withArchivedPause(
+      g,
+      {
+        intent: g.intent,
+        mode: 'normal',
+        pauseReason: null,
+        focusExerciseId: g.focusExerciseId,
+        targetFrequency: g.targetFrequency,
+        periodFrom: null,
+        periodTo: null,
+        lastPause: g.lastPause,
+        updatedAt: new Date().toISOString()
+      },
+      today
+    );
+  }
+
+  /** Show «Вернулся в зал» when pause is active or still stored. */
+  function canClosePause(goal, today = todayStr()) {
+    const g = normalize(goal);
+    if (!g) return false;
+    return effectiveMode(g, today) === 'pause' || g.mode === 'pause' || g.mode === 'travel';
+  }
+
+  /**
    * Completed pause window ready for «after return» analysis (not currently in pause).
    */
   function resolveCompletedPause(goal, today = todayStr()) {
@@ -292,6 +326,8 @@
     fromProfile,
     normalizeLastPause,
     withArchivedPause,
+    closePause,
+    canClosePause,
     resolveCompletedPause,
     isSoftMode,
     effectiveMode,

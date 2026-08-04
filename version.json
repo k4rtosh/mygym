@@ -1,12 +1,12 @@
 {
-  "version": "1.2.2",
+  "version": "1.3.0",
   "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": [
-    "Форма цели: причина простоя и даты — только в нужном режиме",
-    "Разбор после возврата из простоя: объём, частота, фокус-упражнение до/после",
-    "Простой — маркер паузы (lastPause); без автоплана тренировок",
-    "Демо сид v4 с закрытым простоем для карточки возврата"
+    "Коуч 1.3: микроплан вокруг фокуса (короткий шаблон, без спама в календарь)",
+    "«Вернулся в зал» — явное закрытие простоя с архивом lastPause",
+    "Меньше шума: карточки ранжируются по цели, лимит ~6 кроме brief",
+    "Опциональный LLM-rewrite карточек (флаг COACH_LLM_ENABLED, Edge Function coach-enrich; по умолчанию выкл.)"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"

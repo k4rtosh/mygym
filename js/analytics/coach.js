@@ -4,6 +4,8 @@
   const FREQ_WINDOW_DAYS = 28;
   const FREQ_TARGET_DEFAULT = 3;
   const PLATEAU_APPEARANCES = 4;
+  /** Max cards after brief (noise control). */
+  const MAX_REST_CARDS = 6;
 
   function todayFallback() {
     return typeof Utils !== 'undefined'
@@ -357,6 +359,135 @@
     };
   }
 
+  function focusTrackCard(sessions, exercises, ctx, today) {
+    if (!ctx.goal?.focusExerciseId) return null;
+    if (window.CoachGoal?.isSoftMode?.(ctx.mode)) return null;
+
+    const focusId = ctx.goal.focusExerciseId;
+    const name = (exercises || []).find((e) => e.id === focusId)?.name
+      || window._coachFocusName
+      || 'Фокус-упражнение';
+    const done = completedSessions(sessions).slice().sort((a, b) => a.date.localeCompare(b.date));
+    const hits = [];
+    for (const s of done) {
+      for (const ex of s.exercises || []) {
+        if (ex.exerciseId !== focusId) continue;
+        const maxW = maxSetWeight(ex);
+        if (maxW <= 0 && !(ex.sets || []).length) continue;
+        hits.push({ date: s.date, maxW });
+      }
+    }
+
+    if (!hits.length) {
+      return {
+        id: 'coach-focus-track',
+        kind: 'coach',
+        severity: ctx.goal.intent === 'strength' ? 'warn' : 'info',
+        title: `Фокус: ${name}`,
+        body: `В дневнике ещё нет рабочих подходов по «${name}». Добавь в шаблон — иначе цели по силе не на что опереться.`,
+        meta: 'Нет истории',
+        cta: 'templates'
+      };
+    }
+
+    const last = hits[hits.length - 1];
+    const daysSince = daysBetween(last.date, today);
+    const recentFrom = addDays(today, -27);
+    const recentHits = hits.filter((h) => h.date >= recentFrom);
+    const prev = hits.length >= 2 ? hits[hits.length - 2] : null;
+    const delta = prev && last.maxW
+      ? Math.round((last.maxW - prev.maxW) * 10) / 10
+      : null;
+
+    const bits = [
+      `последний раз ${formatShort(last.date)} (${daysSince} дн. назад)`,
+      last.maxW ? `макс. ${last.maxW} кг` : null,
+      recentHits.length ? `${recentHits.length} визита за 28 дн.` : 'за 28 дн. визитов не было'
+    ].filter(Boolean);
+
+    if (daysSince >= 10) {
+      return {
+        id: 'coach-focus-track',
+        kind: 'coach',
+        severity: 'warn',
+        title: `Фокус давно не был: ${name}`,
+        body: `${bits.join(' · ')}. Для цели верни упражнение в ближайшую сессию — хотя бы лёгкие рабочие подходы.`,
+        meta: delta != null ? `К прошлому: ${delta > 0 ? '+' : ''}${delta} кг` : null,
+        cta: 'templates'
+      };
+    }
+
+    if (recentHits.length >= 2 && delta === 0) {
+      return {
+        id: 'coach-focus-track',
+        kind: 'coach',
+        severity: 'info',
+        title: `Фокус без роста: ${name}`,
+        body: `${bits.join(' · ')}. Вес стоит — попробуй +1–2 повтора или микрошаг 1–2.5 кг на следующей сессии.`,
+        meta: null,
+        cta: 'exercises'
+      };
+    }
+
+    return {
+      id: 'coach-focus-track',
+      kind: 'coach',
+      severity: 'ok',
+      title: `Фокус в работе: ${name}`,
+      body: `${bits.join(' · ')}${delta != null && delta !== 0 ? ` · к прошлому ${delta > 0 ? '+' : ''}${delta} кг` : ''}.`,
+      meta: null,
+      cta: 'exercises'
+    };
+  }
+
+  function focusPlanCard(sessions, exercises, templates, ctx, today) {
+    if (!ctx.goal?.focusExerciseId) return null;
+    if (window.CoachGoal?.isSoftMode?.(ctx.mode)) return null;
+
+    const focusId = ctx.goal.focusExerciseId;
+    const name = (exercises || []).find((e) => e.id === focusId)?.name
+      || window._coachFocusName
+      || 'Фокус-упражнение';
+    const tpls = templates || [];
+    const hasFocusNearTop = tpls.some((t) => {
+      const ids = (t.exercises || []).map((e) => e.exerciseId).filter(Boolean);
+      return ids[0] === focusId || ids.slice(0, 3).includes(focusId);
+    });
+
+    const done = completedSessions(sessions);
+    const recentFrom = addDays(today, -13);
+    const recentHits = done.filter((s) =>
+      s.date >= recentFrom
+      && (s.exercises || []).some((e) => e.exerciseId === focusId)
+    ).length;
+
+    // Quiet if focus already in a short template and was trained recently
+    if (hasFocusNearTop && recentHits >= 1) return null;
+
+    const strengthish = ctx.goal.intent === 'strength' || ctx.goal.intent === 'hypertrophy';
+    if (!hasFocusNearTop) {
+      return {
+        id: 'coach-focus-plan',
+        kind: 'coach',
+        severity: strengthish ? 'warn' : 'info',
+        title: `Микроплан: ${name}`,
+        body: `Собери короткий шаблон: «${name}» первым + 1–2 упражнения. Без расписания на неделю — одна ближайшая сессия вокруг фокуса.`,
+        meta: '1 сессия · шаблон',
+        cta: 'apply-focus-plan'
+      };
+    }
+
+    return {
+      id: 'coach-focus-plan',
+      kind: 'coach',
+      severity: 'info',
+      title: `Микроплан: ${name}`,
+      body: `Фокус уже в шаблоне, но давно не было в дневнике. Открой короткую сессию вокруг «${name}» — рабочие подходы без гонки за рекордом.`,
+      meta: 'Ближайшая сессия',
+      cta: 'apply-focus-plan'
+    };
+  }
+
   function nextMoveCard(insightCards, sessions, templates, planned, today, ctx) {
     const warns = (insightCards || []).filter((c) => c.severity === 'warn');
     const done = completedSessions(sessions);
@@ -387,10 +518,10 @@
         severity: 'info',
         title: 'Следующий шаг',
         body: ctx.mode === 'pause'
-          ? `Простой без зала${reasonBit}${until}: это пауза, не провал плана. Коуч зафиксирует период — после возврата сравним объём и фокус с тем, что было до.`
+          ? `Простой без зала${reasonBit}${until}: это пауза, не провал плана. Когда снова в зале — нажми «Вернулся в зал», и коуч сравнит объём/фокус с тем, что было до.`
           : `Щадящий режим${until}: убери тяжёлые максимумы, оставь лёгкий объём и восстановление. Вернёмся к прогрессу после периода.`,
         meta: upcoming[0] ? `План: ${upcoming[0].slice(8, 10)}.${upcoming[0].slice(5, 7)}` : 'План на простой можно набросать позже',
-        cta: 'templates'
+        cta: ctx.mode === 'pause' ? 'close-pause' : 'templates'
       };
     }
 
@@ -522,7 +653,7 @@
         body: warns.length === 1
           ? `Главное сейчас: «${top.title}». Остальное подождёт.`
           : `Сначала разбери «${top.title}» — всего замечаний: ${warns.length}. Ниже детали и следующий шаг.`,
-        meta: goalLine || 'Правила · без ИИ',
+        meta: goalLine || 'Правила',
         cta: top.cta || 'goal'
       };
     }
@@ -535,7 +666,7 @@
       body: ctx.goal.intent === 'strength' && ctx.goal.focusExerciseId
         ? 'По цели всё ровно. Держи фокус-упражнение в плане и чуть двигай рабочие веса — коуч подсветит плато или срыв ритма.'
         : 'По дневнику и цели всё ровно. Держи план — коуч подсветит, если что-то поедет.',
-      meta: goalLine || 'Правила · без ИИ',
+      meta: goalLine || 'Правила',
       cta: 'goal'
     };
   }
@@ -565,6 +696,46 @@
   }
 
   /**
+   * Rank cards by goal relevance, then severity; cap noise.
+   */
+  function rankAndLimit(cards, ctx) {
+    const intent = ctx.goal?.intent || null;
+    const soft = window.CoachGoal?.isSoftMode
+      ? CoachGoal.isSoftMode(ctx.mode)
+      : (ctx.mode === 'pause' || ctx.mode === 'injury');
+    const strengthish = intent === 'strength' || intent === 'hypertrophy';
+    const habitish = intent === 'habit' || intent === 'maintain';
+
+    const idBoost = {
+      'coach-pause-return': 100,
+      'coach-focus-plan': strengthish ? 92 : 68,
+      'coach-next': soft ? 95 : 88,
+      'coach-focus-track': strengthish ? 82 : 48,
+      'coach-frequency': habitish || soft ? 80 : 52,
+      'coach-plateau': soft ? 20 : (strengthish ? 74 : 38),
+      'miss-streak': habitish ? 78 : 62,
+      'idle-groups': strengthish ? 35 : 58,
+      'volume-regression': soft ? 25 : 55,
+      'weight-vs-training': 30
+    };
+    const severityBoost = { warn: 28, info: 10, ok: 0 };
+
+    return cards
+      .slice()
+      .sort((a, b) => {
+        const sa = (idBoost[a.id] || 0)
+          + (severityBoost[a.severity] || 0)
+          + (a.kind === 'coach' ? 6 : 0);
+        const sb = (idBoost[b.id] || 0)
+          + (severityBoost[b.severity] || 0)
+          + (b.kind === 'coach' ? 6 : 0);
+        if (sb !== sa) return sb - sa;
+        return 0;
+      })
+      .slice(0, MAX_REST_CARDS);
+  }
+
+  /**
    * @returns {{ cards: Array, hubHint: string, counts: object, insights: object|null, goal: object|null }}
    */
   function buildPack(input = {}) {
@@ -588,6 +759,8 @@
     const coachExtras = [
       frequencyCard(input.sessions, today, ctx),
       plateauCard(input.sessions, input.exercises, ctx),
+      focusTrackCard(input.sessions, input.exercises, ctx, today),
+      focusPlanCard(input.sessions, input.exercises, input.templates, ctx, today),
       pauseReturnCard(input.sessions, input.exercises, ctx, today),
       nextMoveCard(insightCards, input.sessions, input.templates, input.planned, today, ctx)
     ].filter(Boolean);
@@ -614,14 +787,7 @@
       brief.cta = 'goal';
     }
 
-    const rest = withoutBrief.slice().sort((a, b) => {
-      const severityRank = { warn: 0, info: 1, ok: 2 };
-      const sr = (severityRank[a.severity] ?? 9) - (severityRank[b.severity] ?? 9);
-      if (sr !== 0) return sr;
-      if (a.kind === 'coach' && b.kind !== 'coach') return -1;
-      if (b.kind === 'coach' && a.kind !== 'coach') return 1;
-      return 0;
-    });
+    const rest = rankAndLimit(withoutBrief, ctx);
     const ordered = [brief, ...rest];
 
     const warns = ordered.filter((c) => c.severity === 'warn');
@@ -654,12 +820,16 @@
 
   window.AnalyticsCoach = {
     buildPack,
+    MAX_REST_CARDS,
     _internal: {
       frequencyCard,
       plateauCard,
+      focusTrackCard,
+      focusPlanCard,
       pauseReturnCard,
       nextMoveCard,
       briefCard,
+      rankAndLimit,
       resolveGoal
     }
   };
