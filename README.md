@@ -9,7 +9,7 @@ PWA-дневник тренировок: облачный аккаунт (Supaba
 | **Web** | [k4rtosh.github.io/mygym](https://k4rtosh.github.io/mygym/) |
 | **Android** | Debug APK из GitHub Actions (см. ниже) |
 
-Версия: **1.2.2**. Подробности архитектуры — [TECHNICAL.md](TECHNICAL.md).
+Версия: **1.2.3**. Подробности архитектуры — [TECHNICAL.md](TECHNICAL.md).
 
 ## Где скачать APK
 

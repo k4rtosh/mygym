@@ -988,7 +988,7 @@ class WorkoutManager {
     }
 
     await DB.clearActiveSession();
-    Utils.showToast('Тренировка сохранена в облаке');
+    Utils.showToast('Тренировка сохранена · коуч обновит разбор');
 
     const finishedSession = this.currentSession;
     this.stopAllExerciseTimers();
@@ -1002,7 +1002,17 @@ class WorkoutManager {
       await Onboarding.promptBodyWeightAfterWorkout(finishedSession);
     }
 
-    Router.navigate('history');
+    // After inbox epoch changes — offer coach, don't force
+    const openCoach = await Utils.confirm(
+      'Открыть коуча с обновлённым разбором?',
+      {
+        title: 'Тренировка сохранена',
+        confirmText: 'К коучу',
+        cancelText: 'К истории',
+        confirmClass: 'btn-primary'
+      }
+    );
+    Router.navigate(openCoach ? 'progress-insights' : 'history');
   }
 
   static startExerciseTimer(exerciseIndex) {

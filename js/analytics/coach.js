@@ -357,6 +357,87 @@
     };
   }
 
+  function focusTrackCard(sessions, exercises, ctx, today) {
+    if (!ctx.goal?.focusExerciseId) return null;
+    if (window.CoachGoal?.isSoftMode?.(ctx.mode)) return null;
+
+    const focusId = ctx.goal.focusExerciseId;
+    const name = (exercises || []).find((e) => e.id === focusId)?.name
+      || window._coachFocusName
+      || 'Фокус-упражнение';
+    const done = completedSessions(sessions).slice().sort((a, b) => a.date.localeCompare(b.date));
+    const hits = [];
+    for (const s of done) {
+      for (const ex of s.exercises || []) {
+        if (ex.exerciseId !== focusId) continue;
+        const maxW = maxSetWeight(ex);
+        if (maxW <= 0 && !(ex.sets || []).length) continue;
+        hits.push({ date: s.date, maxW });
+      }
+    }
+
+    if (!hits.length) {
+      return {
+        id: 'coach-focus-track',
+        kind: 'coach',
+        severity: ctx.goal.intent === 'strength' ? 'warn' : 'info',
+        title: `Фокус: ${name}`,
+        body: `В дневнике ещё нет рабочих подходов по «${name}». Добавь в шаблон — иначе цели по силе не на что опереться.`,
+        meta: 'Нет истории',
+        cta: 'templates'
+      };
+    }
+
+    const last = hits[hits.length - 1];
+    const daysSince = daysBetween(last.date, today);
+    const recentFrom = addDays(today, -27);
+    const recentHits = hits.filter((h) => h.date >= recentFrom);
+    const prev = hits.length >= 2 ? hits[hits.length - 2] : null;
+    const delta = prev && last.maxW
+      ? Math.round((last.maxW - prev.maxW) * 10) / 10
+      : null;
+
+    const bits = [
+      `последний раз ${formatShort(last.date)} (${daysSince} дн. назад)`,
+      last.maxW ? `макс. ${last.maxW} кг` : null,
+      recentHits.length ? `${recentHits.length} визита за 28 дн.` : 'за 28 дн. визитов не было'
+    ].filter(Boolean);
+
+    if (daysSince >= 10) {
+      return {
+        id: 'coach-focus-track',
+        kind: 'coach',
+        severity: 'warn',
+        title: `Фокус давно не был: ${name}`,
+        body: `${bits.join(' · ')}. Для цели верни упражнение в ближайшую сессию — хотя бы лёгкие рабочие подходы.`,
+        meta: delta != null ? `К прошлому: ${delta > 0 ? '+' : ''}${delta} кг` : null,
+        cta: 'templates'
+      };
+    }
+
+    if (recentHits.length >= 2 && delta === 0) {
+      return {
+        id: 'coach-focus-track',
+        kind: 'coach',
+        severity: 'info',
+        title: `Фокус без роста: ${name}`,
+        body: `${bits.join(' · ')}. Вес стоит — попробуй +1–2 повтора или микрошаг 1–2.5 кг на следующей сессии.`,
+        meta: null,
+        cta: 'exercises'
+      };
+    }
+
+    return {
+      id: 'coach-focus-track',
+      kind: 'coach',
+      severity: 'ok',
+      title: `Фокус в работе: ${name}`,
+      body: `${bits.join(' · ')}${delta != null && delta !== 0 ? ` · к прошлому ${delta > 0 ? '+' : ''}${delta} кг` : ''}.`,
+      meta: null,
+      cta: 'exercises'
+    };
+  }
+
   function nextMoveCard(insightCards, sessions, templates, planned, today, ctx) {
     const warns = (insightCards || []).filter((c) => c.severity === 'warn');
     const done = completedSessions(sessions);
@@ -588,6 +669,7 @@
     const coachExtras = [
       frequencyCard(input.sessions, today, ctx),
       plateauCard(input.sessions, input.exercises, ctx),
+      focusTrackCard(input.sessions, input.exercises, ctx, today),
       pauseReturnCard(input.sessions, input.exercises, ctx, today),
       nextMoveCard(insightCards, input.sessions, input.templates, input.planned, today, ctx)
     ].filter(Boolean);
@@ -657,6 +739,7 @@
     _internal: {
       frequencyCard,
       plateauCard,
+      focusTrackCard,
       pauseReturnCard,
       nextMoveCard,
       briefCard,

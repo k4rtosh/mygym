@@ -754,7 +754,13 @@ class ProgressManager {
     const pushId = (id) => {
       if (!id || ids.has(id) || !catalog.has(id)) return;
       ids.add(id);
-      options.push({ value: id, label: catalog.get(id).name });
+      const info = catalog.get(id);
+      options.push({
+        value: id,
+        label: info.name,
+        meta: [info.category, info.muscle ? String(info.muscle).split(',')[0] : '']
+          .filter(Boolean).join(' · ')
+      });
     };
     if (currentId) pushId(currentId);
     [...counts.entries()]
@@ -763,6 +769,19 @@ class ProgressManager {
       .forEach(([id]) => pushId(id));
     popular.forEach(pushId);
     return options;
+  }
+
+  static focusExerciseSearchItems(exercises) {
+    return (exercises || [])
+      .filter((e) => e?.id && e?.name)
+      .slice()
+      .sort((a, b) => String(a.name).localeCompare(String(b.name), 'ru'))
+      .map((e) => ({
+        value: e.id,
+        label: e.name,
+        meta: [e.category, e.muscle ? String(e.muscle).split(',')[0] : '']
+          .filter(Boolean).join(' · ')
+      }));
   }
 
   static async editCoachGoal(exercises = [], sessions = []) {
@@ -809,9 +828,13 @@ class ProgressManager {
         {
           name: 'focusExerciseId',
           label: 'Фокус-упражнение',
-          type: 'select',
+          type: 'search-select',
           value: current?.focusExerciseId || '',
-          options: this.focusExerciseOptions(exercises, sessions, current?.focusExerciseId)
+          options: this.focusExerciseOptions(exercises, sessions, current?.focusExerciseId),
+          searchItems: this.focusExerciseSearchItems(exercises),
+          allowEmpty: true,
+          emptyLabel: 'Не важно',
+          placeholder: 'Начни вводить или выбери из частых'
         },
         {
           name: 'targetFrequency',

@@ -327,6 +327,27 @@ const Utils = {
               ${opts}
             </select>
             <div class="invalid-feedback">Проверь поле</div>`;
+        } else if (type === 'search-select') {
+          const allItems = (f.searchItems || f.options || []).map((o) => (
+            typeof o === 'string' ? { value: o, label: o } : { value: String(o.value ?? ''), label: String(o.label ?? o.value ?? '') }
+          ));
+          const currentVal = f.value != null ? String(f.value) : '';
+          const currentHit = currentVal ? allItems.find((o) => o.value === currentVal) : null;
+          const labelText = currentHit ? currentHit.label : '';
+          controlHtml = `
+            <label class="form-label" for="form-field-${this.escapeHtml(f.name)}-q">${this.escapeHtml(f.label)}</label>
+            <div class="search-select" data-search-select="${this.escapeHtml(f.name)}">
+              <input type="hidden" id="form-field-${this.escapeHtml(f.name)}"
+                name="${this.escapeHtml(f.name)}" value="${this.escapeHtml(currentVal)}" ${req}>
+              <input type="search" class="form-control form-control-lg search-select-input"
+                id="form-field-${this.escapeHtml(f.name)}-q"
+                value="${this.escapeHtml(labelText)}"
+                placeholder="${this.escapeHtml(f.placeholder || 'Поиск упражнения…')}"
+                autocomplete="off" spellcheck="false">
+              <div class="search-select-menu d-none" role="listbox"></div>
+              <div class="invalid-feedback">Выбери упражнение из списка</div>
+              <div class="form-text search-select-hint">Частые из дневника — или начни вводить название</div>
+            </div>`;
         } else {
           controlHtml = `
             <label class="form-label" for="form-field-${this.escapeHtml(f.name)}">${this.escapeHtml(f.label)}</label>
@@ -355,6 +376,129 @@ const Utils = {
 
       const form = modal.querySelector('#app-form-modal-form');
 
+      const normalizeOption = (o) => {
+        if (typeof o === 'string') return { value: o, label: o };
+        return {
+          value: String(o.value ?? ''),
+          label: String(o.label ?? o.value ?? ''),
+          meta: o.meta ? String(o.meta) : ''
+        };
+      };
+
+      const initSearchSelect = (f) => {
+        const root = form.querySelector(`[data-search-select="${f.name}"]`);
+        if (!root) return;
+        const hidden = root.querySelector(`#form-field-${f.name}`);
+        const input = root.querySelector('.search-select-input');
+        const menu = root.querySelector('.search-select-menu');
+        if (!hidden || !input || !menu) return;
+
+        const suggested = (f.options || []).map(normalizeOption);
+        const catalog = (f.searchItems || f.options || []).map(normalizeOption);
+        const allowEmpty = f.allowEmpty !== false;
+        const emptyLabel = f.emptyLabel || 'Не важно';
+        let blurTimer = null;
+
+        const renderMenu = (query) => {
+          const q = String(query || '').trim().toLowerCase();
+          let rows = [];
+          if (!q) {
+            rows = suggested.slice();
+          } else {
+            rows = catalog.filter((item) => {
+              if (!item.value) return false;
+              const hay = `${item.label} ${item.meta}`.toLowerCase();
+              return hay.includes(q);
+            }).slice(0, 24);
+          }
+          if (allowEmpty && (!q || emptyLabel.toLowerCase().includes(q))) {
+            rows = [{ value: '', label: emptyLabel, meta: '' }, ...rows.filter((r) => r.value)];
+          }
+          // dedupe by value
+          const seen = new Set();
+          rows = rows.filter((r) => {
+            const key = r.value || '__empty__';
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+
+          if (!rows.length) {
+            menu.innerHTML = `<div class="search-select-empty">Ничего не найдено</div>`;
+            menu.classList.remove('d-none');
+            return;
+          }
+
+          menu.innerHTML = rows.map((item) => `
+            <button type="button" class="search-select-option" role="option"
+              data-value="${this.escapeHtml(item.value)}"
+              data-label="${this.escapeHtml(item.label)}">
+              <span class="search-select-option-label">${this.escapeHtml(item.label)}</span>
+              ${item.meta ? `<span class="search-select-option-meta">${this.escapeHtml(item.meta)}</span>` : ''}
+            </button>
+          `).join('');
+          menu.classList.remove('d-none');
+        };
+
+        const pick = (value, label) => {
+          hidden.value = value;
+          input.value = value ? label : '';
+          menu.classList.add('d-none');
+          input.classList.remove('is-invalid');
+          hidden.classList.remove('is-invalid');
+        };
+
+        input.addEventListener('focus', () => renderMenu(input.value));
+        input.addEventListener('input', () => {
+          // Typing invalidates previous id until a pick (unless exact match later on submit)
+          if (!input.value.trim()) {
+            hidden.value = '';
+          } else if (hidden.value) {
+            const cur = catalog.find((c) => c.value === hidden.value);
+            if (!cur || cur.label !== input.value.trim()) hidden.value = '';
+          }
+          renderMenu(input.value);
+        });
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            menu.classList.add('d-none');
+            e.stopPropagation();
+          }
+          if (e.key === 'Enter') {
+            const first = menu.querySelector('.search-select-option');
+            if (!menu.classList.contains('d-none') && first) {
+              e.preventDefault();
+              pick(first.getAttribute('data-value') || '', first.getAttribute('data-label') || '');
+            }
+          }
+        });
+        menu.addEventListener('mousedown', (e) => {
+          const btn = e.target.closest('.search-select-option');
+          if (!btn) return;
+          e.preventDefault();
+          pick(btn.getAttribute('data-value') || '', btn.getAttribute('data-label') || '');
+        });
+        input.addEventListener('blur', () => {
+          blurTimer = setTimeout(() => {
+            menu.classList.add('d-none');
+            // Resolve typed exact label → id
+            const typed = input.value.trim().toLowerCase();
+            if (!typed) {
+              pick('', '');
+              return;
+            }
+            if (hidden.value) return;
+            const hit = catalog.find((c) => c.label.toLowerCase() === typed);
+            if (hit) pick(hit.value, hit.label);
+          }, 150);
+        });
+        input.addEventListener('focus', () => {
+          if (blurTimer) clearTimeout(blurTimer);
+        });
+      };
+
+      fields.filter((f) => f.type === 'search-select').forEach((f) => initSearchSelect(f));
+
       const isFieldVisible = (f) => {
         if (!f.showWhen?.field) return true;
         const wrap = form.querySelector(`[data-field-wrap="${f.name}"]`);
@@ -376,8 +520,7 @@ const Utils = {
           }
           wrap.style.display = show ? '' : 'none';
           if (!show) {
-            const input = wrap.querySelector('input, select');
-            if (input) input.classList.remove('is-invalid');
+            wrap.querySelectorAll('input, select').forEach((el) => el.classList.remove('is-invalid'));
           }
         });
       };
@@ -397,6 +540,42 @@ const Utils = {
             values[f.name] = null;
             continue;
           }
+
+          if (f.type === 'search-select') {
+            let raw = String(input.value || '').trim();
+            const q = form.querySelector(`#form-field-${f.name}-q`);
+            if (!raw && q?.value?.trim()) {
+              const typed = q.value.trim().toLowerCase();
+              const catalog = (f.searchItems || f.options || []).map(normalizeOption);
+              const hit = catalog.find((c) => c.label.toLowerCase() === typed);
+              if (hit) {
+                raw = hit.value;
+                input.value = hit.value;
+              }
+            }
+            if (raw) anyFilled = true;
+            if (f.required && !raw) {
+              q?.classList.add('is-invalid');
+              input.classList.add('is-invalid');
+              valid = false;
+              continue;
+            }
+            // Typed garbage without pick
+            if (q?.value?.trim() && !raw && f.allowEmpty !== false) {
+              // treat as invalid only if they typed something that isn't empty-label
+              const emptyLabel = (f.emptyLabel || 'Не важно').toLowerCase();
+              if (q.value.trim().toLowerCase() !== emptyLabel) {
+                q.classList.add('is-invalid');
+                valid = false;
+                continue;
+              }
+            }
+            q?.classList.remove('is-invalid');
+            input.classList.remove('is-invalid');
+            values[f.name] = raw || null;
+            continue;
+          }
+
           const raw = input.value.trim();
           if (raw) anyFilled = true;
           if (f.required && !raw) {
