@@ -1,40 +1,32 @@
 # MyGym
 
-PWA-дневник тренировок: облачный аккаунт (Supabase), шаблоны, календарь план/факт, прогресс.
+PWA-дневник тренировок: облачный аккаунт (Supabase), шаблоны, календарь план/факт, прогресс и **коуч**.
 
 Один репозиторий — **два канала** (общие аккаунты и данные):
 
 | Канал | Как пользоваться |
 |--------|------------------|
 | **Web** | [k4rtosh.github.io/mygym](https://k4rtosh.github.io/mygym/) |
-| **Android** | Debug APK из GitHub Actions (см. ниже) |
+| **Android** | Debug APK из [Releases](https://github.com/k4rtosh/mygym/releases/latest) или Actions |
 
-Версия: **1.3.0**. Подробности архитектуры — [TECHNICAL.md](TECHNICAL.md).
+Версия: **1.3.1**. Архитектура — [TECHNICAL.md](TECHNICAL.md).
 
 ## Где скачать APK
 
-Готовая сборка уже есть:
-
-1. Открой успешный run:  
-   **https://github.com/k4rtosh/mygym/actions/runs/30152356177**
-2. Внизу страницы → **Artifacts** → **`mygym-android-apk`** (~3.7 MB)
-3. Скачается **zip** — внутри файл `MyGym-*.apk`
-4. На телефоне: разреши установку из неизвестных источников → открой APK
-
-Нужен вход в GitHub (artifacts приватны для скачивания без логина).  
-Также смотри вкладку [Releases](https://github.com/k4rtosh/mygym/releases) после следующих сборок.
+1. [Releases → latest](https://github.com/k4rtosh/mygym/releases/latest) → `MyGym-latest-debug.apk`
+2. Или **Actions** → **Build Android APK** → Artifacts → `mygym-android-apk` (нужен логин GitHub)
 
 Пересобрать: **Actions** → **Build Android APK** → **Run workflow**.
 
 ## Возможности
 
 - Регистрация / вход (email + пароль), Postgres + RLS
-- Шаблоны: фильтр по мышцам и оборудованию; порядок упражнений — drag-and-drop
+- Шаблоны: фильтр по мышцам и оборудованию; порядок — drag-and-drop
 - Активная тренировка: подходы, таймеры, черновик в IndexedDB
 - Календарь: план / выполнено / пропуск (1 день = 1 тренировка)
-- Прогресс: графики веса и объёма; BW → поле «доп. вес»; **Коуч** (правила по дневнику)
-- Каталог ~188 упражнений (свободный вес, блочный, хаммер, тренажёр, BW, кардио)
-- Профиль: экспорт/импорт JSON, демо-данные, сброс кэша PWA
+- Прогресс: графики; BW → «доп. вес»; **Коуч** (правила по цели и дневнику; опциональный LLM-rewrite)
+- Каталог **185** упражнений
+- Профиль: экспорт/импорт JSON (сессии, шаблоны, план, вес, цель коуча), демо-данные, сброс кэша PWA
 
 ## Стек
 
@@ -51,12 +43,11 @@ GitHub Pages: база `/mygym/` (`BASE_PATH` в `js/config.js`).
 
 ## Android вручную (опционально)
 
-Нужны Node + Android Studio/SDK. Обычно **не нужно** — достаточно CI.
-
 ```bash
 npm install
+npm run sync:version
 npm run cap:sync
-cd android && ./gradlew assembleDebug   # Windows: gradlew.bat
+cd android && ./gradlew assembleDebug   # Windows: npm run android:apk:win
 ```
 
 APK: `android/app/build/outputs/apk/debug/app-debug.apk`
@@ -64,24 +55,29 @@ APK: `android/app/build/outputs/apk/debug/app-debug.apk`
 ## Supabase
 
 Проект **mygym** (`gkcjwunfgzhidqyyhhik`).  
-Ключ: `js/config.js`. Схема/сид: `supabase/`.  
-Настройка Auth: [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
+Ключ: `js/config.js`. Схема/миграции/сид: `supabase/`.  
+Auth: [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
+
+Опциональный LLM: Edge Function `coach-enrich` — флаг `COACH_LLM_ENABLED` в `config.js` (по умолчанию выкл.).
 
 ## Структура (кратко)
 
 | Путь | Назначение |
 |------|------------|
-| `js/`, `pages/`, `css/` | Web / PWA |
+| `js/`, `pages/` (`login`/`home`/`profile`), `css/` | Web / PWA |
+| `js/analytics/` | Domain: insights, coach, вес, adherence |
 | `android/` | Capacitor Android |
-| `www/` | webDir (генерируется, не в git) |
-| `data/exercises.json` | Каталог упражнений |
-| `TECHNICAL.md` | Техническое описание |
+| `www/` | webDir (генерируется `build-www.js`, не в git) |
+| `data/exercises.json` | Каталог (demo fallback + seed) |
+| `supabase/` | schema, migrations, `functions/coach-enrich` |
+| `TECHNICAL.md` | Полное техописание |
 
-## Скрипты каталога
+## Скрипты
 
 ```bash
-node scripts/expand-exercises.js
-node scripts/normalize-equipment.js
-node scripts/add-traps.js
+node scripts/sync-android-version.js   # version.json → gradle + config
+node scripts/build-www.js              # www/ для Capacitor
 # MYGYM_DB_PASSWORD=... node scripts/seed-exercises.js
 ```
+
+Одноразовые правки каталога (уже применены) — в `scripts/legacy/`.

@@ -260,44 +260,6 @@ body .text-primary { color: var(--primary-color) !important; }
   opacity: 0.92;
 }
 
-/* Pull-to-refresh */
-.ptr-host {
-  position: relative;
-}
-
-.ptr-indicator {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  z-index: 20;
-  transform: translate(-50%, -100%);
-  opacity: 0;
-  pointer-events: none;
-  min-width: 110px;
-  text-align: center;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: #1a2332;
-  border: 1px solid var(--stroke);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-  transition: opacity 0.15s ease;
-}
-
-.ptr-indicator-label {
-  font-size: 0.78rem;
-  font-weight: 650;
-  color: #d7dee8;
-}
-
-.ptr-indicator.is-ready {
-  border-color: rgba(255, 90, 106, 0.45);
-}
-
-.ptr-indicator.is-ready .ptr-indicator-label,
-.ptr-indicator.is-loading .ptr-indicator-label {
-  color: #ff8a96;
-}
-
 .home-last { border-color: rgba(255, 90, 106, 0.25); }
 
 .home-last-clickable {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mygym-v1.3.0';
+const CACHE_NAME = 'mygym-v1.3.1';
 
 function detectSwBasePath() {
   try {
@@ -22,10 +22,18 @@ const APP_SHELL = [
   shell('/js/supabaseClient.js'),
   shell('/js/utils.js'),
   shell('/js/db.js'),
+  shell('/js/analytics/profileMetrics.js'),
+  shell('/js/analytics/bodyWeight.js'),
+  shell('/js/analytics/adherence.js'),
+  shell('/js/analytics/insights.js'),
+  shell('/js/analytics/coachGoal.js'),
+  shell('/js/analytics/coach.js'),
+  shell('/js/analytics/coachEnrich.js'),
   shell('/js/demoMode.js'),
   shell('/js/api.js'),
   shell('/js/auth.js'),
   shell('/js/sync.js'),
+  shell('/js/onboarding.js'),
   shell('/js/router.js'),
   shell('/js/gestures.js'),
   shell('/js/templates.js'),

@@ -215,7 +215,6 @@ class CalendarManager {
         </div>
         ${body}
       </div>
-      ${Utils.bottomNav('calendar')}
     `;
 
     container.querySelectorAll('[data-cal-mode]').forEach((btn) => {

@@ -1,6 +1,6 @@
 // Export / import JSON <-> cloud
 class SyncManager {
-  static DATA_SCHEMA_VERSION = '2.0.0';
+  static DATA_SCHEMA_VERSION = '2.1.0';
 
   static async exportData() {
     const user = Auth.getCurrentUser();
@@ -22,7 +22,7 @@ class SyncManager {
       const exportData = {
         meta: {
           exportDate: new Date().toISOString(),
-          appVersion: window.MYGYM_CONFIG?.APP_VERSION || '2.0.0',
+          appVersion: window.MYGYM_CONFIG?.APP_VERSION || '1.3.1',
           dataSchemaVersion: this.DATA_SCHEMA_VERSION,
           exporter: 'MyGym PWA'
         },
@@ -68,15 +68,17 @@ class SyncManager {
         return;
       }
 
-      if (!data.sessions && !data.templates && !data.user) {
+      if (!data.sessions && !data.templates && !data.user && !data.body_weight_entries) {
         Utils.showToast('Файл не содержит данных', 'danger');
         return;
       }
 
+      const bwCount = Array.isArray(data.body_weight_entries) ? data.body_weight_entries.length : 0;
       const confirmed = await Utils.confirm(
         `Импортировать в облако?\n\n` +
         `Тренировок: ${data.sessions ? data.sessions.length : 0}\n` +
-        `Шаблонов: ${data.templates ? data.templates.length : 0}\n\n` +
+        `Шаблонов: ${data.templates ? data.templates.length : 0}\n` +
+        `Замеров веса: ${bwCount}\n\n` +
         `Существующие данные не удаляются — записи добавляются/обновляются.`,
         { title: 'Импорт данных', confirmText: 'Импортировать' }
       );
@@ -91,14 +93,9 @@ class SyncManager {
           const created = await Api.createTemplate({
             name: t.name || 'Импорт',
             description: t.description || '',
-            exercises: (t.exercises || []).map((ex) => ({
-              exerciseId: ex.exerciseId,
-              plannedSets: ex.plannedSets || 3,
-              plannedReps: ex.plannedReps || 10,
-              plannedWeight: ex.plannedWeight || null,
-              restTime: ex.restTime || null,
-              notes: ex.notes || ''
-            }))
+            exercises: (t.exercises || [])
+              .map((ex) => ({ exerciseId: ex.exerciseId }))
+              .filter((ex) => ex.exerciseId)
           });
           if (t.id) templateIdMap[t.id] = created.id;
         }
@@ -130,6 +127,39 @@ class SyncManager {
           if (!date) continue;
           const tid = p.template_id || p.templateId;
           await Api.upsertPlanned(date, (tid && templateIdMap[tid]) || null);
+        }
+      }
+
+      if (bwCount) {
+        for (const e of data.body_weight_entries) {
+          const weightKg = e.weightKg ?? e.weight_kg;
+          const measuredOn = e.measuredOn || e.measured_on;
+          if (weightKg == null || !measuredOn) continue;
+          try {
+            await Api.upsertBodyWeight({
+              weightKg,
+              measuredOn,
+              sessionId: e.sessionId || e.session_id || null,
+              source: e.source === 'onboarding' ? 'onboarding' : 'workout_end'
+            });
+          } catch (err) {
+            console.warn('body weight import skip', measuredOn, err);
+          }
+        }
+      }
+
+      if (data.user) {
+        const patch = {};
+        if (data.user.birth_date) patch.birthDate = data.user.birth_date;
+        if (data.user.coach_goal) patch.coachGoal = data.user.coach_goal;
+        if (data.user.coach_inbox) patch.coachInbox = data.user.coach_inbox;
+        if (Object.keys(patch).length) {
+          try {
+            const updated = await Api.updateProfile(patch);
+            if (window.Auth) Auth.profile = updated;
+          } catch (err) {
+            console.warn('profile import partial', err);
+          }
         }
       }
 

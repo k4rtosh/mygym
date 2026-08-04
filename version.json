@@ -1,12 +1,12 @@
 {
-  "version": "1.3.0",
+  "version": "1.3.1",
   "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": [
-    "Коуч 1.3: микроплан вокруг фокуса (короткий шаблон, без спама в календарь)",
-    "«Вернулся в зал» — явное закрытие простоя с архивом lastPause",
-    "Меньше шума: карточки ранжируются по цели, лимит ~6 кроме brief",
-    "Опциональный LLM-rewrite карточек (флаг COACH_LLM_ENABLED, Edge Function coach-enrich; по умолчанию выкл.)"
+    "Причёска репо: удалены устаревшие pages/файлы и мёртвый код",
+    "Service Worker precache: analytics + onboarding (надёжнее offline)",
+    "Импорт бэкапа: вес тела, цель коуча и inbox",
+    "Документация и версии UI приведены к 1.3.x"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"

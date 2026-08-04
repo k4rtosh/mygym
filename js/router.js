@@ -314,7 +314,7 @@ class AppRouter {
     tabLogin?.addEventListener('click', showLogin);
     tabSignup?.addEventListener('click', showSignup);
 
-    const ver = window.MYGYM_CONFIG?.APP_VERSION || '2.5.1';
+    const ver = window.MYGYM_CONFIG?.APP_VERSION || '1.3.1';
     const verEl = document.getElementById('login-version');
     if (verEl) verEl.textContent = ver;
 
@@ -542,7 +542,7 @@ class AppRouter {
         : '—';
     }
 
-    const version = window.MYGYM_CONFIG?.APP_VERSION || '2.0.0';
+    const version = window.MYGYM_CONFIG?.APP_VERSION || '1.3.1';
     const versionLabel = version.startsWith('v') ? version : `v${version}`;
     document.querySelectorAll('#app-version-display, #update-version-display, #footer-version-display')
       .forEach((el) => { if (el) el.textContent = version; });

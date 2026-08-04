@@ -3,17 +3,29 @@
 URL: `https://gkcjwunfgzhidqyyhhik.supabase.co`  
 Ключ в приложении: `js/config.js` (publishable / anon)
 
-## Сделано
+## Схема
 
-- Таблицы: `profiles`, `exercises`, `templates`, `sessions`, `planned_workouts`
-- RLS + триггер профиля при регистрации
-- Каталог **~188 упражнений** (типы оборудования нормализованы)
-- Email Auth; для пет-проекта обычно **Confirm email** выключен (иначе после signup нет сессии)
+Таблицы:
 
-## Auth (если снова спросит подтверждение почты)
+- `profiles` — в т.ч. `display_name`, `birth_date`, `coach_goal`, `coach_inbox`
+- `exercises` — каталог (~185)
+- `templates`, `sessions`, `planned_workouts`
+- `body_weight_entries`
+
+RLS + триггер профиля при регистрации.  
+Инкрементальные миграции: `supabase/migrations/`. Полная схема: `supabase/schema.sql`.
+
+## Auth
+
+Email Auth; для пет-проекта обычно **Confirm email** выключен (иначе после signup нет сессии).
 
 1. https://supabase.com/dashboard/project/gkcjwunfgzhidqyyhhik/auth/providers  
 2. Email → выключи **Confirm email** → Save
+
+## Edge Functions (опционально)
+
+`coach-enrich` — rewrite title/body карточек коуча. См. `supabase/functions/coach-enrich/`.  
+Клиент: `COACH_LLM_ENABLED` в `js/config.js`. Секрет `OPENAI_API_KEY` (или другой провайдер после доработки функции).
 
 ## Проверка
 
@@ -25,11 +37,11 @@ URL: `https://gkcjwunfgzhidqyyhhik.supabase.co`
 
 | Клиент | Как ходит в API |
 |--------|------------------|
-| GitHub Pages PWA | браузер, SW, BASE_PATH=`/mygym` |
+| GitHub Pages PWA | браузер, SW, `BASE_PATH=/mygym` |
 | Android APK | Capacitor WebView, тот же publishable key |
 
 ## Безопасность
 
 - В клиенте только publishable key (не DB password).
-- Если пароль БД светился в чатах — смени в Project Settings → Database.
-- RLS обязателен: пользователи видят только свои templates/sessions/plans.
+- RLS: пользователи видят только свои templates/sessions/plans/вес.
+- Пароль БД / service role никогда в репозиторий.
