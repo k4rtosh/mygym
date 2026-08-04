@@ -63,9 +63,10 @@ class ProgressManager {
         const goal = window.CoachGoal?.fromProfile
           ? CoachGoal.fromProfile(profile)
           : null;
-        const inbox = window.CoachGoal?.fromProfileInbox
-          ? CoachGoal.fromProfileInbox(profile)
-          : null;
+        const userId = Auth.getCurrentUser()?.id || profile?.id || null;
+        const inbox = window.CoachGoal?.resolveInbox
+          ? CoachGoal.resolveInbox(profile, userId)
+          : (window.CoachGoal?.fromProfileInbox ? CoachGoal.fromProfileInbox(profile) : null);
         const pack = packBuilder({
           planned,
           sessions,
@@ -1001,13 +1002,24 @@ class ProgressManager {
 
   static async dismissCoachCards(cardIds, sessions, profile) {
     const latestId = CoachGoal.latestCompletedSessionId(sessions);
-    const currentInbox = CoachGoal.fromProfileInbox(profile);
+    const userId = Auth.getCurrentUser()?.id || profile?.id || null;
+    const currentInbox = CoachGoal.resolveInbox(profile, userId);
     const next = CoachGoal.dismissCards(currentInbox, cardIds, latestId);
     try {
       const updated = await Api.updateProfile({ coachInbox: next });
       if (window.Auth) Auth.profile = updated;
+      CoachGoal.writeLocalInbox(userId, next);
       await this.loadInsights();
     } catch (e) {
+      if (CoachGoal.isMissingInboxColumnError(e)) {
+        CoachGoal.writeLocalInbox(userId, next);
+        Utils.showToast(
+          'Прочитано локально. В Supabase нет столбца coach_inbox — выполни миграцию (docs/SMOKE.md)',
+          'warning'
+        );
+        await this.loadInsights();
+        return;
+      }
       Utils.showToast(e.message || 'Не удалось отметить', 'danger');
     }
   }
@@ -1059,7 +1071,10 @@ class ProgressManager {
     }
 
     const goal = window.CoachGoal?.fromProfile ? CoachGoal.fromProfile(profile) : null;
-    const inbox = window.CoachGoal?.fromProfileInbox ? CoachGoal.fromProfileInbox(profile) : null;
+    const userId = Auth.getCurrentUser()?.id || profile?.id || null;
+    const inbox = window.CoachGoal?.resolveInbox
+      ? CoachGoal.resolveInbox(profile, userId)
+      : (window.CoachGoal?.fromProfileInbox ? CoachGoal.fromProfileInbox(profile) : null);
 
     let pack = window.AnalyticsCoach?.buildPack
       ? AnalyticsCoach.buildPack({
@@ -1123,7 +1138,7 @@ class ProgressManager {
             </button>
           ` : ''}
           ${dismissable.length ? `
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="coach-read-all-btn" title="Скрыть до следующей тренировки">
+            <button type="button" class="btn btn-sm btn-outline-light" id="coach-read-all-btn" title="Скрыть до следующей тренировки">
               Прочитано
             </button>
           ` : ''}

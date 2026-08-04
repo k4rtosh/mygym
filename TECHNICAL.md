@@ -1,7 +1,7 @@
 # MyGym — технический обзор проекта
 
 > Документ для разработчиков и ИИ-агентов. Описывает актуальную архитектуру, данные, модули, деплой и соглашения.  
-> Версия документа соответствует релизу **1.3.1** (см. `version.json`, `js/config.js`).
+> Версия документа соответствует релизу **1.3.2** (см. `version.json`, `js/config.js`).
 
 ---
 
@@ -766,15 +766,17 @@ node scripts/build-www.js
 | Demo-тренировка в prod | Общий ключ черновика | Использовать scope в `db.js` |
 | Foreign key на `template_id` | Demo template id в prod session | Не смешивать режимы; scope isolation |
 | Кнопки под системной навигацией | Safe area | `--safe-bottom` на modal-footer и bottom-nav |
+| Коуч: ошибка `coach_inbox` / schema cache | Миграция не применена | SQL `migrations/20260804_coach_inbox.sql` + `notify pgrst, 'reload schema';`. До этого «Прочитано» пишет в localStorage |
 
 ---
 
 ## Связанные документы
 
 - [README.md](README.md) — краткий обзор для пользователя
+- [docs/SMOKE.md](docs/SMOKE.md) — чеклист перед релизом
 - [SUPABASE_SETUP.md](SUPABASE_SETUP.md) — настройка Auth и БД
 - [supabase/schema.sql](supabase/schema.sql) — полная схема
 
 ---
 
-*Последнее обновление: v1.3.1*
+*Последнее обновление: v1.3.2*

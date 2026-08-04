@@ -1,12 +1,12 @@
 {
-  "version": "1.3.1",
+  "version": "1.3.2",
   "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": [
-    "Причёска репо: удалены устаревшие pages/файлы и мёртвый код",
-    "Service Worker precache: analytics + onboarding (надёжнее offline)",
-    "Импорт бэкапа: вес тела, цель коуча и inbox",
-    "Документация и версии UI приведены к 1.3.x"
+    "Фикс «Прочитано» в коуче: fallback если нет coach_inbox + подсказка про миграцию",
+    "Вёрстка: старт тренировки, бар цели коуча, meta карточек",
+    "Модалка упражнения по центру (safe-area)",
+    "docs/SMOKE.md — чеклист перед релизом"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"

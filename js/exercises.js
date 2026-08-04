@@ -76,20 +76,20 @@ class ExercisesManager {
     if (!exercise) return;
 
     const modal = document.createElement('div');
-    modal.className = 'modal fade';
+    modal.className = 'modal fade app-dialog';
     modal.tabIndex = -1;
     modal.innerHTML = `
-      <div class="modal-dialog">
+      <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-dark text-light">
           <div class="modal-header">
             <h5 class="modal-title">${Utils.escapeHtml(exercise.name)}</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
           </div>
           <div class="modal-body">
             <p><strong>Категория:</strong> ${Utils.escapeHtml(exercise.category)}</p>
             <p><strong>Мышцы:</strong> ${Utils.escapeHtml(exercise.muscle)}</p>
             <p><strong>Оборудование:</strong> ${Utils.escapeHtml(exercise.type)}</p>
-            <p><strong>Описание:</strong> ${Utils.escapeHtml(exercise.description)}</p>
+            <p class="mb-0"><strong>Описание:</strong> ${Utils.escapeHtml(exercise.description)}</p>
           </div>
         </div>
       </div>
