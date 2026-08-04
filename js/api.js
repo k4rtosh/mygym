@@ -108,8 +108,9 @@ const Api = {
   },
 
   /**
-   * @param {string|{displayName?: string, birthDate?: string|null}} patch
+   * @param {string|{displayName?: string, birthDate?: string|null, coachGoal?: object|null}} patch
    * birthDate can only be set when currently empty (immutable afterwards).
+   * coachGoal: normalized object or null to clear.
    */
   async updateProfile(patch) {
     const user = await this.requireUser();
@@ -125,6 +126,20 @@ const Api = {
           throw new Error('Дата рождения уже задана и не меняется');
         }
         if (!current.birth_date) payload.birth_date = String(patch.birthDate).slice(0, 10);
+      }
+      if (Object.prototype.hasOwnProperty.call(patch, 'coachGoal')) {
+        if (patch.coachGoal === null) {
+          payload.coach_goal = null;
+        } else {
+          const normalized = window.CoachGoal?.normalize
+            ? CoachGoal.normalize(patch.coachGoal)
+            : patch.coachGoal;
+          if (!normalized) throw new Error('Некорректная цель коуча');
+          payload.coach_goal = {
+            ...normalized,
+            updatedAt: new Date().toISOString()
+          };
+        }
       }
     }
 

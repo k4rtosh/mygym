@@ -86,6 +86,20 @@
           }
           if (!current.birth_date) current.birth_date = String(patch.birthDate).slice(0, 10);
         }
+        if (Object.prototype.hasOwnProperty.call(patch, 'coachGoal')) {
+          if (patch.coachGoal === null) {
+            current.coach_goal = null;
+          } else {
+            const normalized = window.CoachGoal?.normalize
+              ? CoachGoal.normalize(patch.coachGoal)
+              : patch.coachGoal;
+            if (!normalized) throw new Error('Некорректная цель коуча');
+            current.coach_goal = {
+              ...normalized,
+              updatedAt: new Date().toISOString()
+            };
+          }
+        }
       }
       putDemoProfile(current);
       DemoAuth.profile = current;

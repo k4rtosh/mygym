@@ -1,12 +1,12 @@
 {
-  "version": "1.1.1",
+  "version": "1.2.0",
   "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": [
-    "Плавнее UI: кеш sessions/templates/exercises/planned (~45с), без auth.getUser на каждый запрос",
-    "Тренировка: +/− веса/повторов без полной перерисовки экрана",
-    "Демо: mem-кеш localStorage — меньше JSON.parse при навигации",
-    "Коуч по-прежнему считается только при открытии экрана"
+    "Коуч: цель (сила/масса/привычка/поддержка) + режим командировка/восстановление на период",
+    "Фокус-упражнение и целевая частота влияют на приоритеты советов",
+    "Цель задаётся на экране Коуча и видна в профиле; демо сид v3 с целью по жиму",
+    "Нужна миграция profiles.coach_goal (см. supabase/migrations)"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"

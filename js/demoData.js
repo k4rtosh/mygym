@@ -1,7 +1,7 @@
 // Demo / test helpers for profile
 const DemoData = {
   /** Bump when seed shape changes — demo login reseeds automatically. */
-  SEED_VERSION: 2,
+  SEED_VERSION: 3,
   SEED_VERSION_KEY: 'mygym_demo_seed_version',
 
   needsReseed() {
@@ -237,7 +237,15 @@ const DemoData = {
     birth.setDate(12);
     await Api.updateProfile({
       displayName: 'Демо Атлет',
-      birthDate: Utils.toDateStr(birth)
+      birthDate: Utils.toDateStr(birth),
+      coachGoal: {
+        intent: 'strength',
+        mode: 'normal',
+        focusExerciseId: 'chest_1',
+        targetFrequency: 3,
+        periodFrom: null,
+        periodTo: null
+      }
     });
 
     // Вес: лёгкий спад в mid → рост в recent при меньшей частоте зала

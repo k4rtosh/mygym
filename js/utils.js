@@ -305,6 +305,23 @@ const Utils = {
         const min = f.min != null ? `min="${this.escapeHtml(String(f.min))}"` : '';
         const max = f.max != null ? `max="${this.escapeHtml(String(f.max))}"` : '';
         const step = f.step != null ? `step="${this.escapeHtml(String(f.step))}"` : '';
+        if (type === 'select') {
+          const opts = (f.options || []).map((o) => {
+            const val = typeof o === 'string' ? o : o.value;
+            const label = typeof o === 'string' ? o : (o.label || o.value);
+            const selected = String(f.value ?? '') === String(val) ? 'selected' : '';
+            return `<option value="${this.escapeHtml(String(val))}" ${selected}>${this.escapeHtml(String(label))}</option>`;
+          }).join('');
+          return `
+          <div class="mb-3">
+            <label class="form-label" for="form-field-${this.escapeHtml(f.name)}">${this.escapeHtml(f.label)}</label>
+            <select class="form-select form-select-lg" id="form-field-${this.escapeHtml(f.name)}"
+              name="${this.escapeHtml(f.name)}" ${req}>
+              ${opts}
+            </select>
+            <div class="invalid-feedback">Проверь поле</div>
+          </div>`;
+        }
         return `
           <div class="mb-3">
             <label class="form-label" for="form-field-${this.escapeHtml(f.name)}">${this.escapeHtml(f.label)}</label>
