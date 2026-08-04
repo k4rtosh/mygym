@@ -21,7 +21,7 @@
     BASE_PATH: base,
     IS_NATIVE: !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()),
     /** Optional LLM rewrite of coach card title/body (rules always compute first). */
-    COACH_LLM_ENABLED: false,
+    COACH_LLM_ENABLED: true,
     /** Empty → `${SUPABASE_URL}/functions/v1/coach-enrich` */
     COACH_LLM_URL: '',
     COACH_LLM_TIMEOUT_MS: 2500
