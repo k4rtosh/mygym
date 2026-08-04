@@ -1496,6 +1496,30 @@ small { color: var(--text-muted); }
   line-height: 1.35;
 }
 
+.coach-goal-bar-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+  align-items: center;
+}
+
+.insight-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.insight-dismiss {
+  text-decoration: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.insight-dismiss:hover {
+  color: #fff !important;
+}
+
 .insight-card-top {
   display: flex;
   justify-content: space-between;

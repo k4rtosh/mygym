@@ -9,6 +9,7 @@ create table if not exists public.profiles (
   display_name text not null default '',
   birth_date date,
   coach_goal jsonb,
+  coach_inbox jsonb,
   created_at timestamptz not null default now()
 );
 

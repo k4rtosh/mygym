@@ -63,6 +63,9 @@ class ProgressManager {
         const goal = window.CoachGoal?.fromProfile
           ? CoachGoal.fromProfile(profile)
           : null;
+        const inbox = window.CoachGoal?.fromProfileInbox
+          ? CoachGoal.fromProfileInbox(profile)
+          : null;
         const pack = packBuilder({
           planned,
           sessions,
@@ -70,6 +73,7 @@ class ProgressManager {
           exercises,
           templates,
           goal,
+          inbox,
           from,
           to
         });
@@ -775,7 +779,7 @@ class ProgressManager {
     const today = Utils.getTodayStr();
     const values = await Utils.formModal({
       title: current ? 'Изменить цель коуча' : 'Цель коуча',
-      message: 'Коуч отталкивается от цели. Режим «командировка» или «восстановление» можно задать на период — потом вернёшься к основной цели.',
+      message: 'Коуч отталкивается от цели. Режим «Простой» — пауза без зала на период (с причиной); после возврата можно сравнить результат.',
       confirmText: 'Сохранить',
       fields: [
         {
@@ -791,8 +795,15 @@ class ProgressManager {
           label: 'Текущий режим',
           type: 'select',
           required: true,
-          value: current?.mode || 'normal',
+          value: current?.mode === 'travel' ? 'pause' : (current?.mode || 'normal'),
           options: CoachGoal.modeOptions()
+        },
+        {
+          name: 'pauseReason',
+          label: 'Причина простоя (если режим «Простой»)',
+          type: 'select',
+          value: current?.pauseReason || '',
+          options: CoachGoal.pauseReasonOptions()
         },
         {
           name: 'focusExerciseId',
@@ -813,7 +824,7 @@ class ProgressManager {
         },
         {
           name: 'periodFrom',
-          label: 'Период режима с (для командировки/восстановления)',
+          label: 'Период режима с (простой / восстановление)',
           type: 'date',
           value: current?.periodFrom || today
         },
@@ -830,6 +841,7 @@ class ProgressManager {
     const goal = CoachGoal.normalize({
       intent: values.intent,
       mode: values.mode,
+      pauseReason: values.pauseReason || null,
       focusExerciseId: values.focusExerciseId || null,
       targetFrequency: values.targetFrequency === '' || values.targetFrequency == null
         ? null
@@ -849,6 +861,19 @@ class ProgressManager {
       await this.loadInsights();
     } catch (e) {
       Utils.showToast(e.message || 'Не удалось сохранить', 'danger');
+    }
+  }
+
+  static async dismissCoachCards(cardIds, sessions, profile) {
+    const latestId = CoachGoal.latestCompletedSessionId(sessions);
+    const currentInbox = CoachGoal.fromProfileInbox(profile);
+    const next = CoachGoal.dismissCards(currentInbox, cardIds, latestId);
+    try {
+      const updated = await Api.updateProfile({ coachInbox: next });
+      if (window.Auth) Auth.profile = updated;
+      await this.loadInsights();
+    } catch (e) {
+      Utils.showToast(e.message || 'Не удалось отметить', 'danger');
     }
   }
 
@@ -899,6 +924,7 @@ class ProgressManager {
     }
 
     const goal = window.CoachGoal?.fromProfile ? CoachGoal.fromProfile(profile) : null;
+    const inbox = window.CoachGoal?.fromProfileInbox ? CoachGoal.fromProfileInbox(profile) : null;
 
     const pack = window.AnalyticsCoach?.buildPack
       ? AnalyticsCoach.buildPack({
@@ -908,6 +934,7 @@ class ProgressManager {
         exercises,
         templates,
         goal,
+        inbox,
         from,
         to,
         today: to
@@ -929,17 +956,28 @@ class ProgressManager {
       const summary = window.CoachGoal?.summaryLine
         ? CoachGoal.summaryLine(goal, exercises)
         : (goal ? 'Цель задана' : 'Цель не задана');
+      const dismissable = (pack.cards || []).filter((c) => c.id !== 'coach-brief');
       goalBar.innerHTML = `
         <div class="coach-goal-bar-text">
           <div class="coach-goal-bar-label">Цель</div>
           <div class="coach-goal-bar-value">${Utils.escapeHtml(summary)}</div>
         </div>
-        <button type="button" class="btn btn-sm btn-outline-light" id="coach-goal-edit-btn">
-          ${goal ? 'Изменить' : 'Задать'}
-        </button>
+        <div class="coach-goal-bar-actions">
+          ${dismissable.length ? `
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="coach-read-all-btn" title="Скрыть до следующей тренировки">
+              Прочитано
+            </button>
+          ` : ''}
+          <button type="button" class="btn btn-sm btn-outline-light" id="coach-goal-edit-btn">
+            ${goal ? 'Изменить' : 'Задать'}
+          </button>
+        </div>
       `;
       goalBar.querySelector('#coach-goal-edit-btn')?.addEventListener('click', () => {
         this.editCoachGoal(exercises, sessions);
+      });
+      goalBar.querySelector('#coach-read-all-btn')?.addEventListener('click', () => {
+        this.dismissCoachCards(dismissable.map((c) => c.id), sessions, profile);
       });
     }
 
@@ -982,20 +1020,28 @@ class ProgressManager {
         ? (card.id === 'coach-brief' ? 'Коуч' : 'Совет')
         : (severityLabel[card.severity] || 'Заметка');
       const showCta = card.cta && (card.cta === 'goal' || ctaRoute[card.cta]);
+      const canDismiss = card.id !== 'coach-brief';
       return `
-      <article class="insight-card insight-${Utils.escapeHtml(card.severity || 'info')}${isCoach ? ' insight-coach' : ''}${card.id === 'coach-brief' ? ' insight-brief' : ''}">
+      <article class="insight-card insight-${Utils.escapeHtml(card.severity || 'info')}${isCoach ? ' insight-coach' : ''}${card.id === 'coach-brief' ? ' insight-brief' : ''}" data-card-id="${Utils.escapeHtml(card.id)}">
         <div class="insight-card-top">
           <span class="insight-severity">${badge}</span>
           ${card.meta ? `<span class="insight-meta">${Utils.escapeHtml(card.meta)}</span>` : ''}
         </div>
         <h6 class="insight-title">${Utils.escapeHtml(card.title)}</h6>
         <p class="insight-body mb-0">${Utils.escapeHtml(card.body)}</p>
-        ${showCta ? `
-          <button type="button" class="btn btn-sm btn-outline-light mt-3 insight-cta"
-            data-insight-cta="${Utils.escapeHtml(card.cta)}">
-            ${Utils.escapeHtml(ctaLabel[card.cta] || 'Открыть')}
-          </button>
-        ` : ''}
+        <div class="insight-card-actions mt-3">
+          ${showCta ? `
+            <button type="button" class="btn btn-sm btn-outline-light insight-cta"
+              data-insight-cta="${Utils.escapeHtml(card.cta)}">
+              ${Utils.escapeHtml(ctaLabel[card.cta] || 'Открыть')}
+            </button>
+          ` : ''}
+          ${canDismiss ? `
+            <button type="button" class="btn btn-sm btn-link text-muted insight-dismiss" data-dismiss-id="${Utils.escapeHtml(card.id)}">
+              Прочитано
+            </button>
+          ` : ''}
+        </div>
       </article>`;
     }).join('');
 
@@ -1008,6 +1054,12 @@ class ProgressManager {
         }
         const route = ctaRoute[key];
         if (route) Router.navigate(route);
+      });
+    });
+
+    list.querySelectorAll('[data-dismiss-id]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.dismissCoachCards([btn.dataset.dismissId], sessions, profile);
       });
     });
   }

@@ -108,9 +108,9 @@ const Api = {
   },
 
   /**
-   * @param {string|{displayName?: string, birthDate?: string|null, coachGoal?: object|null}} patch
+   * @param {string|{displayName?: string, birthDate?: string|null, coachGoal?: object|null, coachInbox?: object|null}} patch
    * birthDate can only be set when currently empty (immutable afterwards).
-   * coachGoal: normalized object or null to clear.
+   * coachGoal / coachInbox: objects or null to clear.
    */
   async updateProfile(patch) {
     const user = await this.requireUser();
@@ -139,6 +139,15 @@ const Api = {
             ...normalized,
             updatedAt: new Date().toISOString()
           };
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(patch, 'coachInbox')) {
+        if (patch.coachInbox === null) {
+          payload.coach_inbox = null;
+        } else {
+          payload.coach_inbox = window.CoachGoal?.normalizeInbox
+            ? CoachGoal.normalizeInbox(patch.coachInbox)
+            : patch.coachInbox;
         }
       }
     }
