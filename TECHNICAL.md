@@ -421,7 +421,8 @@ In-memory кеш списков (~45 с; каталог упражнений ~10
 - `AnalyticsAdherence` — план/факт/пропуски по диапазону дат
 - `AnalyticsInsights` — карточки «разбор ошибок» (`buildCards`)
 - `CoachGoal` — нормализация цели (`intent`, `mode` вкл. **Простой**, `pauseReason`, фокус, период, частота, `lastPause`) + inbox «прочитано до следующей тренировки»
-- `AnalyticsCoach` — rule-коуч (`buildPack`): фокус, частота, плато, **возврат после простоя**, следующий шаг + insights; без LLM
+- `AnalyticsCoach` — rule-коуч (`buildPack`): фокус-трек, частота, плато, возврат после простоя, следующий шаг + insights; без LLM
+- Форма цели: `search-select` для фокус-упражнения (частые + поиск по каталогу)
 
 Новую аналитику писать **сюда**, UI — тонкая оболочка в `progress.js` (хаб «Коуч», маршрут `progress-insights`).  
 Цель: `profiles.coach_goal`. Inbox: `profiles.coach_inbox`. Миграции в `supabase/migrations/`.  
