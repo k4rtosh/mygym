@@ -305,6 +305,14 @@ const Utils = {
         const min = f.min != null ? `min="${this.escapeHtml(String(f.min))}"` : '';
         const max = f.max != null ? `max="${this.escapeHtml(String(f.max))}"` : '';
         const step = f.step != null ? `step="${this.escapeHtml(String(f.step))}"` : '';
+        const showWhen = f.showWhen && f.showWhen.field
+          ? `data-show-when-field="${this.escapeHtml(f.showWhen.field)}" data-show-when-equals="${this.escapeHtml(
+            Array.isArray(f.showWhen.in)
+              ? f.showWhen.in.join('|')
+              : String(f.showWhen.equals ?? '')
+          )}" data-show-when-mode="${Array.isArray(f.showWhen.in) ? 'in' : 'equals'}"`
+          : '';
+        let controlHtml = '';
         if (type === 'select') {
           const opts = (f.options || []).map((o) => {
             const val = typeof o === 'string' ? o : o.value;
@@ -312,27 +320,24 @@ const Utils = {
             const selected = String(f.value ?? '') === String(val) ? 'selected' : '';
             return `<option value="${this.escapeHtml(String(val))}" ${selected}>${this.escapeHtml(String(label))}</option>`;
           }).join('');
-          return `
-          <div class="mb-3">
+          controlHtml = `
             <label class="form-label" for="form-field-${this.escapeHtml(f.name)}">${this.escapeHtml(f.label)}</label>
             <select class="form-select form-select-lg" id="form-field-${this.escapeHtml(f.name)}"
               name="${this.escapeHtml(f.name)}" ${req}>
               ${opts}
             </select>
-            <div class="invalid-feedback">Проверь поле</div>
-          </div>`;
-        }
-        return `
-          <div class="mb-3">
+            <div class="invalid-feedback">Проверь поле</div>`;
+        } else {
+          controlHtml = `
             <label class="form-label" for="form-field-${this.escapeHtml(f.name)}">${this.escapeHtml(f.label)}</label>
             <input class="form-control form-control-lg" id="form-field-${this.escapeHtml(f.name)}"
               name="${this.escapeHtml(f.name)}" type="${this.escapeHtml(type)}"
               value="${this.escapeHtml(f.value || '')}"
               placeholder="${this.escapeHtml(f.placeholder || '')}"
               ${req} ${min} ${max} ${step} autocomplete="off">
-            <div class="invalid-feedback">Проверь поле</div>
-          </div>
-        `;
+            <div class="invalid-feedback">Проверь поле</div>`;
+        }
+        return `<div class="mb-3 form-field-wrap" data-field-wrap="${this.escapeHtml(f.name)}" ${showWhen}>${controlHtml}</div>`;
       }).join('');
 
       const { modal, bsModal } = this._createAppDialog({
@@ -349,6 +354,38 @@ const Utils = {
       });
 
       const form = modal.querySelector('#app-form-modal-form');
+
+      const isFieldVisible = (f) => {
+        if (!f.showWhen?.field) return true;
+        const wrap = form.querySelector(`[data-field-wrap="${f.name}"]`);
+        return !!(wrap && wrap.style.display !== 'none');
+      };
+
+      const syncShowWhen = () => {
+        form.querySelectorAll('[data-show-when-field]').forEach((wrap) => {
+          const dep = wrap.getAttribute('data-show-when-field');
+          const mode = wrap.getAttribute('data-show-when-mode') || 'equals';
+          const raw = wrap.getAttribute('data-show-when-equals') || '';
+          const depEl = form.querySelector(`#form-field-${dep}`);
+          const depVal = depEl ? String(depEl.value) : '';
+          let show = false;
+          if (mode === 'in') {
+            show = raw.split('|').includes(depVal);
+          } else {
+            show = depVal === raw;
+          }
+          wrap.style.display = show ? '' : 'none';
+          if (!show) {
+            const input = wrap.querySelector('input, select');
+            if (input) input.classList.remove('is-invalid');
+          }
+        });
+      };
+      syncShowWhen();
+      form.addEventListener('change', (e) => {
+        if (e.target?.matches?.('select, input')) syncShowWhen();
+      });
+
       const submit = () => {
         const values = {};
         let valid = true;
@@ -356,6 +393,10 @@ const Utils = {
         for (const f of fields) {
           const input = form.querySelector(`#form-field-${f.name}`);
           if (!input) continue;
+          if (!isFieldVisible(f)) {
+            values[f.name] = null;
+            continue;
+          }
           const raw = input.value.trim();
           if (raw) anyFilled = true;
           if (f.required && !raw) {
@@ -387,7 +428,11 @@ const Utils = {
           }
         }
         if (requireAny && !anyFilled) {
-          form.querySelectorAll('input').forEach((el) => el.classList.add('is-invalid'));
+          form.querySelectorAll('input, select').forEach((el) => {
+            const wrap = el.closest('[data-field-wrap]');
+            if (wrap && wrap.style.display === 'none') return;
+            el.classList.add('is-invalid');
+          });
           valid = false;
         }
         if (!valid) return;

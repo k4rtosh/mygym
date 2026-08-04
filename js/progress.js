@@ -800,10 +800,11 @@ class ProgressManager {
         },
         {
           name: 'pauseReason',
-          label: 'Причина простоя (если режим «Простой»)',
+          label: 'Причина простоя',
           type: 'select',
           value: current?.pauseReason || '',
-          options: CoachGoal.pauseReasonOptions()
+          options: CoachGoal.pauseReasonOptions(),
+          showWhen: { field: 'mode', equals: 'pause' }
         },
         {
           name: 'focusExerciseId',
@@ -824,15 +825,17 @@ class ProgressManager {
         },
         {
           name: 'periodFrom',
-          label: 'Период режима с (простой / восстановление)',
+          label: 'Период режима с',
           type: 'date',
-          value: current?.periodFrom || today
+          value: current?.periodFrom || today,
+          showWhen: { field: 'mode', in: ['pause', 'injury'] }
         },
         {
           name: 'periodTo',
           label: 'Период режима по',
           type: 'date',
-          value: current?.periodTo || ''
+          value: current?.periodTo || '',
+          showWhen: { field: 'mode', in: ['pause', 'injury'] }
         }
       ]
     });

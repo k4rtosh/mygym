@@ -1,12 +1,11 @@
 {
-  "version": "1.2.1",
+  "version": "1.2.2",
   "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": [
-    "Режим «Простой (без зала)» вместо командировки + причина простоя и период",
-    "Замечания коуча: «Прочитано» скрывает до следующей завершённой тренировки",
-    "Без расширения каталога BW — простой фиксируется как пауза для анализа после возврата",
-    "Миграция profiles.coach_inbox (см. supabase/migrations)"
+    "Форма цели: причина простоя и даты периода показываются только в нужном режиме",
+    "Простой остаётся маркером паузы — без автоплана тренировок",
+    "Без изменений каталога упражнений"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"
