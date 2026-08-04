@@ -1,7 +1,7 @@
 # MyGym — технический обзор проекта
 
 > Документ для разработчиков и ИИ-агентов. Описывает актуальную архитектуру, данные, модули, деплой и соглашения.  
-> Версия документа соответствует релизу **1.1.1** (см. `version.json`, `js/config.js`).
+> Версия документа соответствует релизу **1.2.0** (см. `version.json`, `js/config.js`).
 
 ---
 
@@ -159,7 +159,8 @@ mygym/
 │   │   ├── bodyWeight.js
 │   │   ├── adherence.js
 │   │   ├── insights.js
-│   │   └── coach.js        # Rule-коуч поверх insights
+│   │   ├── coachGoal.js    # Нормализация цели коуча
+│   │   └── coach.js        # Rule-коуч поверх insights + цели
 │   ├── demoMode.js         # Demo API/Auth shim (localStorage)
 │   ├── api.js              # Supabase CRUD
 │   ├── auth.js             # Supabase email/password auth
@@ -419,9 +420,11 @@ In-memory кеш списков (~45 с; каталог упражнений ~10
 - `AnalyticsBodyWeight` — нормализация и сводка серии веса
 - `AnalyticsAdherence` — план/факт/пропуски по диапазону дат
 - `AnalyticsInsights` — карточки «разбор ошибок» (`buildCards`)
-- `AnalyticsCoach` — rule-коуч (`buildPack`): фокус, частота, плато, следующий шаг + insights; без LLM
+- `CoachGoal` — нормализация цели (`intent`, `mode`, фокус, период, частота)
+- `AnalyticsCoach` — rule-коуч (`buildPack`): фокус, частота, плато, следующий шаг + insights; приоритеты зависят от цели/режима; без LLM
 
-Новую аналитику писать **сюда**, UI — тонкая оболочка в `progress.js` (хаб «Коуч», маршрут `progress-insights`).
+Новую аналитику писать **сюда**, UI — тонкая оболочка в `progress.js` (хаб «Коуч», маршрут `progress-insights`).  
+Цель хранится в `profiles.coach_goal` (jsonb). Миграция: `supabase/migrations/20260804_coach_goal.sql`.
 
 LLM-коуч (позже): Supabase Edge Function, тот же контракт карточек — не свободный чат.
 
@@ -771,4 +774,4 @@ node scripts/add-traps.js
 
 ---
 
-*Последнее обновление: v1.1.0*
+*Последнее обновление: v1.2.0*

@@ -30,7 +30,8 @@ class SyncManager {
           id: user.id,
           name: user.name,
           email: user.email,
-          birth_date: profile?.birth_date || null
+          birth_date: profile?.birth_date || null,
+          coach_goal: profile?.coach_goal || null
         },
         sessions,
         templates,

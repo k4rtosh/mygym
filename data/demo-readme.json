@@ -1,7 +1,7 @@
 {
   "meta": {
     "note": "Demo dataset is generated in-app via DemoData.seed() on demo login (empty or seed version bump). Profile clear resets data.",
-    "seedVersion": 2,
+    "seedVersion": 3,
     "templates": [
       "Демо · Жим / плечи",
       "Демо · Спина",
@@ -13,6 +13,12 @@
     "planned": 10,
     "bodyWeight": 14,
     "spanDays": 82,
-    "narrative": "Early full split → peak PPL volume → lighter recent + miss streak + weight up; feeds coach/insights warns"
+    "coachGoal": {
+      "intent": "strength",
+      "mode": "normal",
+      "focusExerciseId": "chest_1",
+      "targetFrequency": 3
+    },
+    "narrative": "Early full split → peak PPL volume → lighter recent + miss streak + weight up; feeds coach/insights warns; default strength goal on bench"
   }
 }

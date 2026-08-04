@@ -557,6 +557,23 @@ class AppRouter {
 
     await this.refreshProfileMetrics();
 
+    try {
+      const profile = await Api.getProfile();
+      const goal = window.CoachGoal?.fromProfile ? CoachGoal.fromProfile(profile) : null;
+      const summaryEl = document.getElementById('profile-coach-goal-summary');
+      if (summaryEl) {
+        summaryEl.textContent = window.CoachGoal?.summaryLine
+          ? CoachGoal.summaryLine(goal, [])
+          : (goal ? 'Цель задана' : 'Цель не задана');
+      }
+      document.getElementById('profile-coach-goal-btn')?.addEventListener('click', () => {
+        Router.navigate('progress-insights');
+      });
+    } catch (_) {
+      const summaryEl = document.getElementById('profile-coach-goal-summary');
+      if (summaryEl) summaryEl.textContent = 'Не удалось загрузить';
+    }
+
     if (window.UpdateCheck) {
       UpdateCheck.refreshProfileUI().catch(() => {});
     }
