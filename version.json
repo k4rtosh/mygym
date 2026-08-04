@@ -1,12 +1,12 @@
 {
-  "version": "1.2.3",
+  "version": "1.3.0",
   "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": [
-    "Фокус-упражнение: поиск по каталогу + частые из дневника в подсказках",
-    "Коуч: отдельная карточка трека фокуса (визиты, давность, рост веса)",
-    "После тренировки — выбор: открыть коуча или историю",
-    "Форма цели без изменений полей простоя"
+    "Коуч 1.3: микроплан вокруг фокуса (короткий шаблон, без спама в календарь)",
+    "«Вернулся в зал» — явное закрытие простоя с архивом lastPause",
+    "Меньше шума: карточки ранжируются по цели, лимит ~6 кроме brief",
+    "Опциональный LLM-rewrite карточек (флаг COACH_LLM_ENABLED, Edge Function coach-enrich; по умолчанию выкл.)"
   ],
   "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
   "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"

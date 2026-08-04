@@ -1,7 +1,7 @@
 # MyGym — технический обзор проекта
 
 > Документ для разработчиков и ИИ-агентов. Описывает актуальную архитектуру, данные, модули, деплой и соглашения.  
-> Версия документа соответствует релизу **1.2.3** (см. `version.json`, `js/config.js`).
+> Версия документа соответствует релизу **1.3.0** (см. `version.json`, `js/config.js`).
 
 ---
 
@@ -159,8 +159,9 @@ mygym/
 │   │   ├── bodyWeight.js
 │   │   ├── adherence.js
 │   │   ├── insights.js
-│   │   ├── coachGoal.js    # Нормализация цели коуча
-│   │   └── coach.js        # Rule-коуч поверх insights + цели
+│   │   ├── coachGoal.js    # Нормализация цели коуча + closePause / inbox
+│   │   ├── coach.js        # Rule-коуч: ранжирование, микроплан, лимит карточек
+│   │   └── coachEnrich.js  # Опциональный LLM-rewrite (флаг; fallback на правила)
 │   ├── demoMode.js         # Demo API/Auth shim (localStorage)
 │   ├── api.js              # Supabase CRUD
 │   ├── auth.js             # Supabase email/password auth
@@ -209,6 +210,7 @@ mygym/
 ├── supabase/
 │   ├── schema.sql          # Таблицы + RLS + триггеры
 │   ├── migrations/         # Инкрементальные SQL (existing projects)
+│   ├── functions/          # Edge Functions (coach-enrich и др.)
 │   ├── seed_exercises.sql
 │   └── README.md
 │
@@ -420,15 +422,16 @@ In-memory кеш списков (~45 с; каталог упражнений ~10
 - `AnalyticsBodyWeight` — нормализация и сводка серии веса
 - `AnalyticsAdherence` — план/факт/пропуски по диапазону дат
 - `AnalyticsInsights` — карточки «разбор ошибок» (`buildCards`)
-- `CoachGoal` — нормализация цели (`intent`, `mode` вкл. **Простой**, `pauseReason`, фокус, период, частота, `lastPause`) + inbox «прочитано до следующей тренировки»
-- `AnalyticsCoach` — rule-коуч (`buildPack`): фокус-трек, частота, плато, возврат после простоя, следующий шаг + insights; без LLM
+- `CoachGoal` — нормализация цели (`intent`, `mode` вкл. **Простой**, `pauseReason`, фокус, период, частота, `lastPause`) + inbox «прочитано до следующей тренировки» + `closePause()` / `canClosePause()`
+- `AnalyticsCoach` — rule-коуч (`buildPack`): фокус-трек, **микроплан фокуса**, частота, плато, возврат после простоя, следующий шаг + insights; ранжирование по цели, лимит ~6 карточек кроме brief
+- `CoachEnrich` — опциональный rewrite title/body через Edge Function `coach-enrich` (`COACH_LLM_ENABLED`, fallback на правила; без чата)
 - Форма цели: `search-select` для фокус-упражнения (частые + поиск по каталогу)
 
 Новую аналитику писать **сюда**, UI — тонкая оболочка в `progress.js` (хаб «Коуч», маршрут `progress-insights`).  
 Цель: `profiles.coach_goal`. Inbox: `profiles.coach_inbox`. Миграции в `supabase/migrations/`.  
-При выходе из режима «Простой» период архивируется в `lastPause` для сравнения до/после.
+При выходе из режима «Простой» (форма или кнопка «Вернулся в зал») период архивируется в `lastPause` для сравнения до/после.
 
-LLM-коуч (позже): Supabase Edge Function, тот же контракт карточек — не свободный чат.
+LLM-коуч: Supabase Edge Function `supabase/functions/coach-enrich` — тот же контракт карточек, не свободный чат. По умолчанию выключен в клиенте.
 
 ### `router.js`
 `AppRouter`: navigate, history stack (`pushState`/`popstate`), `handleHardwareBack()`, initLoginPage, initHomePage, initProfilePage.  
@@ -776,4 +779,4 @@ node scripts/add-traps.js
 
 ---
 
-*Последнее обновление: v1.2.3*
+*Последнее обновление: v1.3.0*

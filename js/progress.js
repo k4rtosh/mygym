@@ -895,6 +895,115 @@ class ProgressManager {
     }
   }
 
+  /** Explicit return from pause → archive lastPause, mode normal. */
+  static async closeCoachPause(exercises = [], sessions = []) {
+    let profile = null;
+    try {
+      profile = await Api.getProfile();
+    } catch (e) {
+      Utils.showToast(e.message || 'Не удалось загрузить профиль', 'danger');
+      return;
+    }
+    const current = CoachGoal.fromProfile(profile);
+    if (!CoachGoal.canClosePause(current)) {
+      Utils.showToast('Сейчас нет активного простоя', 'info');
+      return;
+    }
+    const ok = await Utils.confirm(
+      'Закрыть простой и вернуться к обычному режиму? Коуч сохранит период для сравнения до/после.',
+      { title: 'Вернулся в зал', confirmText: 'Да, вернулся', cancelText: 'Отмена' }
+    );
+    if (!ok) return;
+
+    const next = CoachGoal.closePause(current);
+    if (!next) {
+      Utils.showToast('Не удалось закрыть простой', 'warning');
+      return;
+    }
+    try {
+      const updated = await Api.updateProfile({ coachGoal: next });
+      if (window.Auth) Auth.profile = updated;
+      Utils.showToast('Простой закрыт · обычный режим');
+      await this.loadInsights();
+    } catch (e) {
+      Utils.showToast(e.message || 'Не удалось сохранить', 'danger');
+    }
+  }
+
+  /**
+   * Light apply: ensure a short template with focus first (+ companions).
+   * No multi-day calendar spam.
+   */
+  static async applyFocusPlan(exercises = [], sessions = [], templates = [], goal = null) {
+    const focusId = goal?.focusExerciseId;
+    if (!focusId) {
+      Utils.showToast('Сначала задай фокус-упражнение в цели', 'warning');
+      return;
+    }
+    const catalog = new Map((exercises || []).map((e) => [e.id, e]));
+    const focus = catalog.get(focusId);
+    const focusName = focus?.name || 'Фокус';
+
+    const companionScores = new Map();
+    for (const s of sessions || []) {
+      if (!s?.completed) continue;
+      const ids = (s.exercises || []).map((e) => e.exerciseId).filter(Boolean);
+      if (!ids.includes(focusId)) continue;
+      for (const id of ids) {
+        if (id === focusId) continue;
+        companionScores.set(id, (companionScores.get(id) || 0) + 1);
+      }
+    }
+    let companions = [...companionScores.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([id]) => id)
+      .filter((id) => catalog.has(id))
+      .slice(0, 2);
+
+    if (!companions.length && focus?.muscle) {
+      const muscle = String(focus.muscle).split(',')[0].trim().toLowerCase();
+      companions = (exercises || [])
+        .filter((e) => e.id !== focusId && String(e.muscle || '').toLowerCase().includes(muscle))
+        .slice(0, 2)
+        .map((e) => e.id);
+    }
+
+    const orderedIds = [focusId, ...companions].slice(0, 4);
+    const exerciseRows = orderedIds.map((exerciseId) => ({ exerciseId }));
+
+    const existing = (templates || []).find((t) => {
+      const ids = (t.exercises || []).map((e) => e.exerciseId);
+      return ids.includes(focusId) && ids.length <= 5;
+    });
+
+    try {
+      if (existing) {
+        const rest = (existing.exercises || [])
+          .map((e) => e.exerciseId)
+          .filter((id) => id && id !== focusId && !companions.includes(id));
+        const merged = [focusId, ...companions, ...rest].slice(0, 5)
+          .map((exerciseId) => ({ exerciseId }));
+        await Api.updateTemplate(existing.id, {
+          exercises: merged,
+          description: existing.description || 'Микроплан вокруг фокуса'
+        });
+        Utils.showToast(`Шаблон «${existing.name}» обновлён под фокус`);
+        Router.navigate('template-edit', { id: existing.id });
+        return;
+      }
+
+      const created = await Api.createTemplate({
+        name: `Фокус · ${focusName}`,
+        description: 'Микроплан от коуча · 1 ближайшая сессия',
+        exercises: exerciseRows
+      });
+      Utils.showToast('Короткий шаблон вокруг фокуса готов');
+      Router.navigate('template-edit', { id: created.id });
+    } catch (e) {
+      Utils.showToast(e.message || 'Не удалось собрать шаблон', 'danger');
+    }
+  }
+
   static async dismissCoachCards(cardIds, sessions, profile) {
     const latestId = CoachGoal.latestCompletedSessionId(sessions);
     const currentInbox = CoachGoal.fromProfileInbox(profile);
@@ -919,7 +1028,7 @@ class ProgressManager {
           </button>
           <div class="flex-grow-1">
             <h4 class="mb-0">Коуч</h4>
-            <p class="text-muted mb-0 small">По цели и дневнику · правила, без ИИ</p>
+            <p class="text-muted mb-0 small" id="coach-subtitle">По цели и дневнику · правила</p>
           </div>
         </div>
       </div>
@@ -957,7 +1066,7 @@ class ProgressManager {
     const goal = window.CoachGoal?.fromProfile ? CoachGoal.fromProfile(profile) : null;
     const inbox = window.CoachGoal?.fromProfileInbox ? CoachGoal.fromProfileInbox(profile) : null;
 
-    const pack = window.AnalyticsCoach?.buildPack
+    let pack = window.AnalyticsCoach?.buildPack
       ? AnalyticsCoach.buildPack({
         planned,
         sessions,
@@ -982,18 +1091,42 @@ class ProgressManager {
         })
         : { cards: [], hubHint: 'Модуль коуча не загружен', counts: {} };
 
+    if (window.CoachEnrich?.maybeEnrich) {
+      pack = await CoachEnrich.maybeEnrich(pack, {
+        goal,
+        sessions,
+        exercises,
+        templates
+      });
+    }
+
+    const subtitle = document.getElementById('coach-subtitle');
+    if (subtitle) {
+      subtitle.textContent = pack.enriched
+        ? 'По цели и дневнику · правила + ИИ'
+        : 'По цели и дневнику · правила';
+    }
+
     const goalBar = document.getElementById('coach-goal-bar');
     if (goalBar) {
       const summary = window.CoachGoal?.summaryLine
         ? CoachGoal.summaryLine(goal, exercises)
         : (goal ? 'Цель задана' : 'Цель не задана');
       const dismissable = (pack.cards || []).filter((c) => c.id !== 'coach-brief');
+      const showClosePause = window.CoachGoal?.canClosePause
+        ? CoachGoal.canClosePause(goal, to)
+        : false;
       goalBar.innerHTML = `
         <div class="coach-goal-bar-text">
           <div class="coach-goal-bar-label">Цель</div>
           <div class="coach-goal-bar-value">${Utils.escapeHtml(summary)}</div>
         </div>
         <div class="coach-goal-bar-actions">
+          ${showClosePause ? `
+            <button type="button" class="btn btn-sm btn-outline-success" id="coach-close-pause-btn" title="Закрыть простой">
+              Вернулся в зал
+            </button>
+          ` : ''}
           ${dismissable.length ? `
             <button type="button" class="btn btn-sm btn-outline-secondary" id="coach-read-all-btn" title="Скрыть до следующей тренировки">
               Прочитано
@@ -1006,6 +1139,9 @@ class ProgressManager {
       `;
       goalBar.querySelector('#coach-goal-edit-btn')?.addEventListener('click', () => {
         this.editCoachGoal(exercises, sessions);
+      });
+      goalBar.querySelector('#coach-close-pause-btn')?.addEventListener('click', () => {
+        this.closeCoachPause(exercises, sessions);
       });
       goalBar.querySelector('#coach-read-all-btn')?.addEventListener('click', () => {
         this.dismissCoachCards(dismissable.map((c) => c.id), sessions, profile);
@@ -1029,14 +1165,18 @@ class ProgressManager {
       exercises: 'progress-exercises',
       'body-weight': 'progress-body-weight',
       templates: 'templates',
-      goal: null
+      goal: null,
+      'close-pause': null,
+      'apply-focus-plan': null
     };
     const ctaLabel = {
       missed: 'К пропускам',
       exercises: 'К упражнениям',
       'body-weight': 'К весу',
       templates: 'К шаблонам',
-      goal: 'Изменить цель'
+      goal: 'Изменить цель',
+      'close-pause': 'Вернулся в зал',
+      'apply-focus-plan': 'Собрать шаблон'
     };
 
     const severityLabel = {
@@ -1050,7 +1190,12 @@ class ProgressManager {
       const badge = isCoach
         ? (card.id === 'coach-brief' ? 'Коуч' : 'Совет')
         : (severityLabel[card.severity] || 'Заметка');
-      const showCta = card.cta && (card.cta === 'goal' || ctaRoute[card.cta]);
+      const showCta = card.cta && (
+        card.cta === 'goal'
+        || card.cta === 'close-pause'
+        || card.cta === 'apply-focus-plan'
+        || ctaRoute[card.cta]
+      );
       const canDismiss = card.id !== 'coach-brief';
       return `
       <article class="insight-card insight-${Utils.escapeHtml(card.severity || 'info')}${isCoach ? ' insight-coach' : ''}${card.id === 'coach-brief' ? ' insight-brief' : ''}" data-card-id="${Utils.escapeHtml(card.id)}">
@@ -1081,6 +1226,14 @@ class ProgressManager {
         const key = btn.dataset.insightCta;
         if (key === 'goal') {
           this.editCoachGoal(exercises, sessions);
+          return;
+        }
+        if (key === 'close-pause') {
+          this.closeCoachPause(exercises, sessions);
+          return;
+        }
+        if (key === 'apply-focus-plan') {
+          this.applyFocusPlan(exercises, sessions, templates, goal);
           return;
         }
         const route = ctaRoute[key];

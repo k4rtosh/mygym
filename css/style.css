@@ -1498,9 +1498,11 @@ small { color: var(--text-muted); }
 
 .coach-goal-bar-actions {
   display: flex;
+  flex-wrap: wrap;
   flex-shrink: 0;
   gap: 6px;
   align-items: center;
+  justify-content: flex-end;
 }
 
 .insight-card-actions {

@@ -3,3 +3,11 @@
 --
 -- Existing projects (upgrade to body metrics / 2.6.0):
 --   also run migrations/20260727_body_metrics.sql
+--
+-- Coach goal / inbox:
+--   migrations/20260804_coach_goal.sql
+--   migrations/20260804_coach_inbox.sql
+--
+-- Optional LLM rewrite of coach cards:
+--   supabase functions deploy coach-enrich
+--   (see functions/coach-enrich/README.md)
