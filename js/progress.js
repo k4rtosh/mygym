@@ -460,11 +460,6 @@ class ProgressManager {
     });
   }
 
-  // backward-compatible alias
-  static renderChart(exerciseId) {
-    return this.renderExerciseChart(exerciseId);
-  }
-
   // ── Body weight ──────────────────────────────────────
   static async loadBodyWeight() {
     this.destroyChart();

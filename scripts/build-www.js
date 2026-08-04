@@ -14,7 +14,6 @@ const entries = [
   'sw.js',
   'manifest.json',
   'version.json',
-  'favicon.ico',
   'css',
   'js',
   'pages',

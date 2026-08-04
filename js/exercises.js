@@ -53,7 +53,6 @@ class ExercisesManager {
           })
         }</div>
       </div>
-      ${Utils.bottomNav('profile')}
     `;
 
     const searchInput = document.getElementById('exercise-search');

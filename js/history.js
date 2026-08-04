@@ -51,7 +51,6 @@ class HistoryManager {
     container.innerHTML = `
       <div class="app-header fade-in"><h4>История</h4></div>
       <div class="container fade-in hist-page">${sessionsHTML}</div>
-      ${Utils.bottomNav('home')}
     `;
   }
 
@@ -182,7 +181,6 @@ class HistoryManager {
           <i class="bi bi-trash"></i> Удалить
         </button>
       </div>
-      ${Utils.bottomNav('home')}
     `;
   }
 

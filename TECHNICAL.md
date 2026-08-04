@@ -1,7 +1,7 @@
 # MyGym — технический обзор проекта
 
 > Документ для разработчиков и ИИ-агентов. Описывает актуальную архитектуру, данные, модули, деплой и соглашения.  
-> Версия документа соответствует релизу **1.3.0** (см. `version.json`, `js/config.js`).
+> Версия документа соответствует релизу **1.3.1** (см. `version.json`, `js/config.js`).
 
 ---
 
@@ -168,26 +168,24 @@ mygym/
 │   ├── sync.js             # Экспорт/импорт JSON
 │   ├── onboarding.js       # Первичные данные + вес после тренировки
 │   ├── router.js           # Маршрутизация + history stack + init login/home/profile
-│   ├── gestures.js         # Свайп / long-press / pull-to-refresh (pointer events)
+│   ├── gestures.js         # Консервативные жесты (агрессивный PTR/swipe убраны)
 │   ├── templates.js        # Шаблоны, редактор, picker упражнений
 │   ├── workout.js          # Старт/активная/завершение тренировки
 │   ├── history.js          # Список и деталь истории
 │   ├── exercises.js        # Просмотр каталога упражнений
 │   ├── calendar.js         # Календарь план/факт
-│   ├── progress.js         # Хаб прогресса + графики Chart.js
+│   ├── progress.js         # Хаб прогресса + графики Chart.js + Коуч UI
 │   ├── demoData.js         # Генерация/очистка тестовых данных
 │   └── updateCheck.js      # Проверка version.json, модалка обновления
 │
-├── pages/                  # HTML-фрагменты (вставляются в #app)
+├── pages/                  # HTML-фрагменты (fetch только login/home/profile)
 │   ├── login.html
 │   ├── home.html
-│   ├── profile.html
-│   ├── templates.html
-│   └── template-edit.html
+│   └── profile.html
 │
 ├── data/
 │   ├── exercises.json      # Локальный каталог (fallback для demo, seed)
-│   └── demo-readme.json
+│   └── demo-readme.json    # Описание демо-сида (не runtime)
 │
 ├── icons/                  # PWA / favicon
 ├── resources/              # Исходники для @capacitor/assets (иконки, splash)
@@ -201,11 +199,10 @@ mygym/
 │
 ├── scripts/
 │   ├── build-www.js        # Копия web-ассетов в www/ для Capacitor
-│   ├── sync-android-version.js  # Синхронизация version.json → build.gradle + config.js
-│   ├── expand-exercises.js
-│   ├── normalize-equipment.js
-│   ├── add-traps.js
-│   └── seed-exercises.js   # Заливка каталога в Supabase (нужен DB password)
+│   ├── sync-android-version.js  # version.json → build.gradle + config.js
+│   ├── apply-supabase.js   # Вспомогательные SQL-операции
+│   ├── seed-exercises.js   # Заливка каталога в Supabase (нужен DB password)
+│   └── legacy/             # Одноразовые правки каталога (уже применены)
 │
 ├── supabase/
 │   ├── schema.sql          # Таблицы + RLS + триггеры
@@ -373,7 +370,7 @@ Skip онбординга на сессию: `sessionStorage.mygym_onboarding_sk
 - `DemoMode.enableDemo()` + `activateDemoShims()`
 - Данные: **localStorage** (не Supabase)
 - При входе: `DemoData.seed()` если нет сессий **или** `needsReseed()` (версия сида `SEED_VERSION`)
-- Сид v2: ~12 недель, 5 шаблонов (жим/плечи, спина, ноги, руки, кор), ~29 сессий, планы с серией пропусков, рост веса — сценарии для коуча
+- Сид v4: ~12 недель, 5 шаблонов (жим/плечи, спина, ноги, руки, кор), сессии, планы с пропусками, вес, `coach_goal` — сценарии для коуча
 - Визуальный индикатор: полоска `DEMO · локальные данные` под статус-баром (`body.is-demo-mode`)
 - Logout: очистка demo-сессии + `location.reload()` (возврат prod Api/Auth)
 
@@ -456,17 +453,17 @@ LLM-коуч: Supabase Edge Function `supabase/functions/coach-enrich` — то�
 
 ### `history.js`, `calendar.js`, `exercises.js`
 Соответствующие экраны. Календарь использует `AnalyticsAdherence.dayStatus` при наличии.  
-`CalendarManager.quickPlan(dateStr)` — компактный план (long-press / CTA на главной).
+`CalendarManager.quickPlan(dateStr)` — компактный план (CTA на главной / день в календаре).
 
 ### `progress.js`
-Хаб категорий + экраны графиков (Chart.js) + `progress-insights` («Подсказки»).  
+Хаб категорий + экраны графиков (Chart.js) + `progress-insights` («Коуч»).  
 Расчёты веса/пропусков/инсайтов — через `analytics/`.
 
 ### `sync.js`
-`SyncManager`: export JSON (включая `body_weight_entries` и `birth_date`), import legacy backup → Supabase.
+`SyncManager`: export JSON (сессии, шаблоны, план, `body_weight_entries`, `birth_date`, `coach_goal`, `coach_inbox`); import восстанавливает те же поля (schema `2.1.0`).
 
 ### `demoData.js`
-`DemoData.seed()` / `clearAll()` / `needsReseed()` — расширенный тестовый набор (шаблоны, сессии, планы, вес, birth_date; `SEED_VERSION`).
+`DemoData.seed()` / `clearAll()` / `needsReseed()` — расширенный тестовый набор (`SEED_VERSION` = 4).
 
 ### `updateCheck.js`
 См. [раздел 13](#13-система-обновлений).
@@ -549,7 +546,8 @@ LLM-коуч: Supabase Edge Function `supabase/functions/coach-enrich` — то�
 
 ## 12. PWA и Service Worker
 
-Файл: `sw.js`, cache name: `mygym-v1.0.0` (меняется с релизом).
+Файл: `sw.js`, cache name: `mygym-v1.3.1` (меняется с релизом).  
+`APP_SHELL` precache включает `js/analytics/*`, `onboarding.js` и страницы login/home/profile.
 
 ### Стратегии кэширования
 
@@ -578,12 +576,12 @@ LLM-коуч: Supabase Edge Function `supabase/functions/coach-enrich` — то�
 
 ```json
 {
-  "version": "0.5.0",
-  "minVersion": "2.5.0",
+  "version": "1.3.1",
+  "minVersion": "0.5.0",
   "critical": false,
   "releaseNotes": ["..."],
-  "apkDownloadUrl": "https://github.com/.../MyGym-latest-debug.apk",
-  "releasesPageUrl": "https://github.com/.../releases/latest"
+  "apkDownloadUrl": "https://github.com/k4rtosh/mygym/releases/latest/download/MyGym-latest-debug.apk",
+  "releasesPageUrl": "https://github.com/k4rtosh/mygym/releases/latest"
 }
 ```
 
@@ -702,13 +700,13 @@ npm start
 
 «Войти в демо» на экране логина — полный UI без облака.
 
-### Полезные скрипты каталога
+### Полезные скрипты
 
 ```bash
-node scripts/expand-exercises.js
-node scripts/normalize-equipment.js
-node scripts/add-traps.js
+node scripts/sync-android-version.js
+node scripts/build-www.js
 # MYGYM_DB_PASSWORD=... node scripts/seed-exercises.js
+# Одноразовые правки каталога — scripts/legacy/ (не гонять в prod без нужды)
 ```
 
 ---
@@ -779,4 +777,4 @@ node scripts/add-traps.js
 
 ---
 
-*Последнее обновление: v1.3.0*
+*Последнее обновление: v1.3.1*

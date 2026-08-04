@@ -48,23 +48,6 @@ class WorkoutManager {
     this.stopRestTimer();
   }
 
-  static focusExercise(index) {
-    if (index == null || index < 0) return;
-    const ex = this.currentSession?.exercises?.[index];
-    if (!ex || ex.completed) return;
-    this.activeExerciseIndex = index;
-  }
-
-  static syncActiveExerciseHighlight() {
-    const cards = document.querySelectorAll('[data-exercise-index]');
-    cards.forEach((card) => {
-      const idx = Number(card.dataset.exerciseIndex);
-      const isCurrent = idx === this.activeExerciseIndex && !card.classList.contains('workout-ex-done');
-      card.classList.toggle('workout-ex-current', isCurrent);
-      card.classList.toggle('border-info', isCurrent);
-    });
-  }
-
   static async guardActiveWorkout() {
     const draft = await DB.loadActiveSession();
     if (!draft || !draft.id || draft.endTime) return 'ok';
@@ -1045,15 +1028,6 @@ class WorkoutManager {
         this.persist(true);
       }
     }
-  }
-
-  static toggleExerciseTimer(exerciseIndex) {
-    if (this.currentSession.exercises[exerciseIndex]?.completed) {
-      Utils.showToast('Упражнение уже завершено', 'warning');
-      return;
-    }
-    if (this.exerciseTimers[exerciseIndex]) this.stopExerciseTimer(exerciseIndex);
-    else this.startExerciseTimer(exerciseIndex);
   }
 
   static restoreExerciseTimers() {

@@ -700,21 +700,6 @@ const Utils = {
     });
   },
 
-  navItems() {
-    return [
-      { id: 'home', icon: 'bi-house', label: 'Главная' },
-      { id: 'calendar', icon: 'bi-calendar3', label: 'Календарь' },
-      { id: 'templates', icon: 'bi-collection', label: 'Шаблоны' },
-      { id: 'progress', icon: 'bi-graph-up', label: 'Прогресс' },
-      { id: 'profile', icon: 'bi-person', label: 'Профиль' }
-    ];
-  },
-
-  // Legacy helper (pages may still call it — returns empty to avoid duplicate nav)
-  bottomNav(_active) {
-    return '';
-  },
-
   ensureShellNav() {
     return document.getElementById('shell-nav');
   },
